@@ -101,7 +101,7 @@ async function sendMessage(message) {
     
     // 保存到历史记录
     messageHistory.push({ role: 'user', content: message });
-    messageHistory.push({ role: 'bot', content: data.content || data.message || data.reply || '' });
+    messageHistory.push({ role: 'assistant', content: data.content || data.message || data.reply || '' });
     
     // 限制历史记录长度
     if (messageHistory.length > CONFIG.maxHistory * 2) {
