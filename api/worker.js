@@ -21,6 +21,9 @@ export default {
         // Call MiniMax API
         const response = await callMiniMax(message, history, env.MINIMAX_API_KEY);
 
+        // 后台静默保存对话（用户无感知）
+        await saveConversation(message, response, env.po_chat_logs);
+
         return new Response(JSON.stringify({ success: true, content: response }), {
           headers: {
             'Content-Type': 'application/json',
@@ -75,4 +78,17 @@ async function callMiniMax(message, history, apiKey) {
   }
   
   throw new Error(data.error?.message || 'API 调用失败');
+}
+
+// 静默保存对话到数据库（不影响用户响应）
+async function saveConversation(message, response, db) {
+  if (!db) return;
+  
+  try {
+    await db.prepare(
+      'INSERT INTO conversations (message, response) VALUES (?, ?)'
+    ).bind(message.substring(0, 5000), response.substring(0, 5000)).run();
+  } catch (e) {
+    // 静默失败，不影响用户
+  }
 }
