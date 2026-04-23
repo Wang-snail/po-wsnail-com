@@ -12,7 +12,7 @@ const CONFIG = {
   chatEndpoint: API_BASE_URL ? `${API_BASE_URL}/chat` : '',
   
   // 请求超时时间（毫秒）
-  timeout: 30000,
+  timeout: 60000,
   
   // 最大历史消息数
   maxHistory: 50,
