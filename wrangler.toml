@@ -1,0 +1,3 @@
+name = "po-chat-api"
+main = "api/worker.js"
+compatibility_date = "2026-04-23"

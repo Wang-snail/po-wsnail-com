@@ -2,9 +2,9 @@
 // Po Chat - 前端配置
 // ============================================
 
-// TODO: 配置你的 ZeroClaw API 地址
-// 例如: http://localhost:8080 或 https://your-zeroclaw.example.com
-const API_BASE_URL = ''; // 在这里填入你的 API 地址
+// 配置你的 Po Chat API 地址
+// 使用 Cloudflare Workers API，更安全
+const API_BASE_URL = 'https://po-chat-api.bing117119.workers.dev';
 
 // 配置项
 const CONFIG = {
