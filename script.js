@@ -68,10 +68,8 @@ async function handleSubmit(e) {
 }
 
 // 发送消息到 API
-async function sendMessage(message) {
+async function sendMessage(message, retryCount = 0) {
   if (!CONFIG.chatEndpoint) {
-    // TODO: 这里填入你的 ZeroClaw API 响应
-    // 暂时返回提示信息
     return getPlaceholderResponse(message);
   }
   
@@ -90,13 +88,13 @@ async function sendMessage(message) {
       }),
       signal: controller.signal,
     });
-    
+
     clearTimeout(timeoutId);
     
     if (!res.ok) {
       throw new Error(`API 错误: ${res.status}`);
     }
-    
+
     const data = await res.json();
     
     // 保存到历史记录
@@ -111,8 +109,21 @@ async function sendMessage(message) {
     return data.content || data.message || data.reply || '无响应';
   } catch (error) {
     clearTimeout(timeoutId);
+    console.error('API Error:', error.message);
+    
+    // 网络错误时自动重试（最多2次）
+    if ((error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('network')) && retryCount < 2) {
+      console.log(`重试中... (${retryCount + 1}/2)`);
+      await new Promise(r => setTimeout(r, 1000)); // 等待1秒
+      return sendMessage(message, retryCount + 1);
+    }
+    
+    // 更友好的错误提示
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      throw new Error('网络连接失败，请检查网络后重试');
+    }
     if (error.name === 'AbortError') {
-      throw new Error('请求超时');
+      throw new Error('请求超时，请重试');
     }
     throw error;
   }
