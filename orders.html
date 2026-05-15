@@ -226,7 +226,7 @@
 
     <main>
       <h1>微信扫码支付</h1>
-      <p>支付成功后系统会自动到账并增加分析次数。无需截图、无需联系开发者、无需人工确认。</p>
+      <p id="paymentIntro">支付成功后系统会自动到账并增加分析次数。无需截图、无需联系开发者、无需人工确认。</p>
 
       <div class="layout">
         <section class="panel">
@@ -268,6 +268,7 @@
     const paymentQr = document.getElementById("paymentQr");
     const qrTitle = document.getElementById("qrTitle");
     const qrPlaceholder = document.getElementById("qrPlaceholder");
+    const paymentIntro = document.getElementById("paymentIntro");
     let currentOrderNo = params.get("orderNo") || params.get("order_no") || "";
     let pollTimer = null;
 
@@ -319,6 +320,7 @@
       const orderNo = currentOrderNo || view.order_no || "-";
       const amount = view.amount_yuan || view.amount || Number(view.amount_cents || 0) / 100;
       const pay = payment || view.payment || view;
+      const manualReview = Boolean(pay.manual_review || view.status === "pending_review");
       const qrSrc = pay.qrcode || view.payment_qrcode || "";
       const payUrl = pay.pay_url || view.pay_url || qrSrc || "";
       paymentQr.style.display = qrSrc ? "" : "none";
@@ -326,6 +328,9 @@
       qrTitle.textContent = `${view.product_name || view.productName || products[productId]?.productName || "套餐"}微信支付二维码`;
       qrPlaceholder.style.display = qrSrc ? "none" : "flex";
       qrPlaceholder.textContent = ["paid", "approved"].includes(view.status) ? "订单已支付并开通" : "支付二维码生成中或暂不可用";
+      paymentIntro.textContent = manualReview
+        ? "当前自动支付通道暂未配置，付款后会进入人工核对；管理员确认到账后次数会开通。"
+        : "支付成功后系统会自动到账并增加分析次数。无需截图、无需联系开发者、无需人工确认。";
       document.getElementById("payLinkWrap").style.display = payUrl ? "block" : "none";
       document.getElementById("payLink").href = payUrl || "#";
       summary.innerHTML = `
@@ -333,7 +338,7 @@
         <div class="line"><span>套餐</span><strong>${view.product_name || view.productName || view.product_id || "-"}</strong></div>
         <div class="line"><span>权益</span><strong>${view.desc || (view.subscription_quota ? view.subscription_quota + " 次月卡额度" : (view.credits ? view.credits + " 次完整分析" : "-"))}</strong></div>
         <div class="line"><span>金额</span><strong>¥${Number(amount || 0).toLocaleString("zh-CN")}</strong></div>
-        <div class="line"><span>状态</span><strong>${statusText(view.status)}</strong></div>
+        <div class="line"><span>状态</span><strong>${manualReview ? "待人工核对" : statusText(view.status)}</strong></div>
         <div class="line"><span>提交时间</span><strong>${view.submitted_at ? new Date(view.submitted_at).toLocaleString("zh-CN") : "-"}</strong></div>
         <div class="line"><span>支付时间</span><strong>${view.paid_at ? new Date(view.paid_at).toLocaleString("zh-CN") : "-"}</strong></div>
       `;
@@ -358,7 +363,9 @@
         localStorage.setItem("po_order_submission", JSON.stringify({ ...activeDraft(), ...data.order, payment: data.payment, userAccount: data.user.account, userUid: data.user.user_uid }));
         renderSummary(data.order, data.payment);
         result.style.display = "block";
-        result.textContent = data.reused ? "已复用 10 分钟内的待支付订单，请扫码付款。" : "支付订单已创建，请扫码付款。付款成功后次数会自动到账。";
+        result.textContent = data.fallback === "manual_review"
+          ? (data.message || "已创建待人工核对订单，请扫码付款。")
+          : (data.reused ? "已复用 10 分钟内的待支付订单，请扫码付款。" : "支付订单已创建，请扫码付款。付款成功后次数会自动到账。");
         startPolling();
       } catch (error) {
         result.style.display = "block";

@@ -29,7 +29,7 @@ export default {
       if (request.method === "GET" && url.pathname === "/api/auth/verify-email") return await handleVerifyEmail(request, env);
       if (request.method === "GET" && ["/api/me", "/api/user/me"].includes(url.pathname)) return await handleMe(request, env);
       if (request.method === "POST" && url.pathname === "/api/reports/consume") return await handleConsumeReport(request, env);
-      if (request.method === "POST" && url.pathname === "/api/pay/create") return await handlePayCreate(request, env);
+      if (request.method === "POST" && url.pathname === "/api/pay/create") return await handlePayCreate(request, env, ctx);
       if (request.method === "POST" && url.pathname === "/api/pay/callback") return await handlePayCallback(request, env);
       if (request.method === "POST" && url.pathname === "/api/orders/manual-create") return await handleManualCreateOrder(request, env, ctx);
       if (request.method === "GET" && url.pathname === "/api/orders/status") return await handleOrderStatus(request, env);
@@ -257,7 +257,7 @@ async function handleManualCreateOrder(request, env, ctx) {
   return jsonResponse({ success: true, reused: false, message: "已提交确认，正在审核中。", order: publicOrder(order), user: publicUser(user) });
 }
 
-async function handlePayCreate(request, env) {
+async function handlePayCreate(request, env, ctx) {
   const db = await poDb(env);
   const user = await requireUser(request, db);
   if (!user) return jsonResponse({ success: false, error: "请先登录" }, 401);
@@ -265,9 +265,7 @@ async function handlePayCreate(request, env) {
   const productId = String(body.productId || body.product_id || "");
   const product = PRODUCTS[productId];
   if (!product) return jsonResponse({ success: false, error: "未知套餐" }, 400);
-  if (!env.PAYJS_MCHID || !env.PAYJS_KEY) {
-    return jsonResponse({ success: false, error: "PayJS 未配置：请设置 PAYJS_MCHID 和 PAYJS_KEY" }, 503);
-  }
+  if (!env.PAYJS_MCHID || !env.PAYJS_KEY) return await createManualFallbackOrder(request, env, ctx, db, user, productId, product);
 
   const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, "+00:00");
   const existing = await db.prepare(`
@@ -320,6 +318,49 @@ async function handlePayCreate(request, env) {
   `).bind(payjsOrderId, qrcode, payUrl, payjsOrderId, orderNo).run();
   const order = await db.prepare("SELECT * FROM po_orders WHERE order_no = ?").bind(orderNo).first();
   return jsonResponse({ success: true, reused: false, order: publicOrder(order), payment: publicPayment(order), user: publicUser(user) });
+}
+
+async function createManualFallbackOrder(request, env, ctx, db, user, productId, product) {
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, "+00:00");
+  const existing = await db.prepare(`
+    SELECT * FROM po_orders
+    WHERE user_id = ? AND product_id = ? AND status = 'pending_review'
+      AND submitted_at >= ?
+    ORDER BY id DESC LIMIT 1
+  `).bind(user.id, productId, tenMinutesAgo).first();
+  if (existing) {
+    const payment = publicPayment(existing);
+    return jsonResponse({
+      success: true,
+      reused: true,
+      fallback: "manual_review",
+      message: "当前自动支付通道暂未配置，已复用待核对订单。",
+      order: publicOrder(existing),
+      payment,
+      user: publicUser(user)
+    });
+  }
+
+  const orderNo = `MANUAL_${formatOrderTime(new Date())}_${randomHex(3).toUpperCase()}`;
+  const submittedAt = nowIso();
+  const base = new URL(request.url).origin;
+  const qrPath = `/payment/${productId}.jpg`;
+  await db.prepare(`
+    INSERT INTO po_orders
+      (order_no, user_id, product_id, product_type, amount_cents, credits, subscription_quota, status, paid, payment_qrcode, pay_url, submitted_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_review', 0, ?, ?, ?)
+  `).bind(orderNo, user.id, productId, product.product_type, product.amount_cents, product.credits, product.subscription_quota, qrPath, `${base}${qrPath}`, submittedAt).run();
+  const order = await db.prepare("SELECT * FROM po_orders WHERE order_no = ?").bind(orderNo).first();
+  ctx.waitUntil(notifyAdmin(order, user, env).catch(error => console.error("notify failed", error)));
+  return jsonResponse({
+    success: true,
+    reused: false,
+    fallback: "manual_review",
+    message: "自动支付通道暂未配置，已创建待人工核对订单。付款后管理员确认到账即可开通。",
+    order: publicOrder(order),
+    payment: publicPayment(order),
+    user: publicUser(user)
+  });
 }
 
 async function handlePayCallback(request, env) {
@@ -666,11 +707,13 @@ function publicAdminOrder(order) {
 }
 
 function publicPayment(order) {
+  const payjsOrderId = order.payjs_order_id || "";
   return {
     order_no: order.order_no,
     qrcode: order.payment_qrcode || "",
     pay_url: order.pay_url || order.payment_qrcode || "",
-    payjs_order_id: order.payjs_order_id || "",
+    payjs_order_id: payjsOrderId,
+    manual_review: !payjsOrderId && order.status === "pending_review",
     amount_cents: Number(order.amount_cents || 0),
     amount_yuan: Number(order.amount_cents || 0) / 100
   };
