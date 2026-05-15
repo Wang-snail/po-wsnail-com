@@ -59,7 +59,7 @@
     }
 
     .app {
-      max-width: 1680px;
+      width: min(100%, 1920px);
       margin: 0 auto;
       padding: 28px;
     }
@@ -126,6 +126,22 @@
     }
 
     .text-link:hover {
+      background: #d8e2ef;
+    }
+
+    .nav-button {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      background: #e6edf7;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .nav-button:hover {
       background: #d8e2ef;
     }
 
@@ -330,6 +346,22 @@
 
     .workspace-results {
       min-width: 0;
+    }
+
+    .result-shell {
+      display: grid;
+      gap: 16px;
+    }
+
+    .result-priority,
+    .result-evidence {
+      display: grid;
+      gap: 14px;
+    }
+
+    .result-evidence {
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
     }
 
     .section-head {
@@ -578,7 +610,7 @@
       border-radius: 8px;
       background: #eef6ff;
       padding: 18px;
-      margin-bottom: 14px;
+      margin-bottom: 0;
       box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
     }
 
@@ -654,7 +686,7 @@
       border-radius: 8px;
       background: var(--surface);
       padding: 16px;
-      margin-bottom: 14px;
+      margin-bottom: 0;
     }
 
     .action-list {
@@ -692,7 +724,7 @@
       border-radius: 8px;
       background: var(--surface);
       padding: 16px;
-      margin-bottom: 14px;
+      margin-bottom: 0;
     }
 
     .roadmap-list {
@@ -753,7 +785,7 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
-      margin-bottom: 14px;
+      margin-bottom: 0;
     }
 
     .path-card {
@@ -996,6 +1028,81 @@
       font-size: 12px;
     }
 
+    .contact-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: rgba(15, 23, 42, 0.42);
+    }
+
+    .contact-modal.hidden {
+      display: none;
+    }
+
+    .contact-dialog {
+      width: min(520px, 100%);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+      overflow: hidden;
+    }
+
+    .contact-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .contact-head h2 {
+      margin-bottom: 4px;
+      font-size: 20px;
+    }
+
+    .contact-close {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border-radius: 999px;
+      background: #e6edf7;
+      color: var(--ink);
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .contact-body {
+      display: grid;
+      gap: 12px;
+      padding: 18px 20px 20px;
+    }
+
+    .contact-row {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfdff;
+      padding: 12px;
+    }
+
+    .contact-row strong {
+      color: var(--ink);
+    }
+
+    .contact-row span {
+      color: var(--muted);
+      font-weight: 700;
+      word-break: break-all;
+    }
+
     .score-bar {
       height: 9px;
       background: #dde6f0;
@@ -1148,19 +1255,27 @@
 
     @media (min-width: 1180px) {
       body {
-        background:
-          linear-gradient(90deg, #eef3f8 0, #eef3f8 430px, var(--bg) 430px);
+        background: #eef3f8;
       }
 
       .app {
-        padding: 20px 24px;
+        width: 100%;
+        max-width: none;
+        padding: 0;
       }
 
       header {
-        grid-template-columns: minmax(0, 1fr) auto;
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        grid-template-columns: minmax(360px, 1fr) auto auto;
         align-items: center;
-        margin-bottom: 14px;
-        padding-bottom: 14px;
+        gap: 18px;
+        margin-bottom: 0;
+        padding: 12px 32px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(255, 255, 255, 0.94);
+        backdrop-filter: blur(14px);
       }
 
       h1 {
@@ -1184,17 +1299,22 @@
       }
 
       .top-actions {
-        margin-top: 9px;
+        margin-top: 0;
+        justify-content: flex-end;
+        align-items: center;
+        order: 2;
       }
 
-      .text-link {
+      .text-link,
+      .nav-button {
         min-height: 30px;
         padding: 5px 9px;
         font-size: 12px;
       }
 
       .workflow {
-        min-width: 420px;
+        min-width: 390px;
+        order: 1;
       }
 
       .workflow span {
@@ -1203,9 +1323,10 @@
       }
 
       .value-stage {
-        grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
-        gap: 12px;
-        margin-bottom: 12px;
+        grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.75fr);
+        gap: 14px;
+        margin: 0;
+        padding: 16px 32px 0;
       }
 
       .case-card,
@@ -1275,22 +1396,23 @@
       }
 
       .layout {
-        grid-template-columns: minmax(380px, 430px) minmax(0, 1fr);
-        gap: 14px;
+        grid-template-columns: clamp(360px, 25vw, 460px) minmax(0, 1fr);
+        gap: 16px;
         align-items: start;
+        padding: 16px 32px 28px;
       }
 
       .workspace-sidebar {
         position: sticky;
-        top: 14px;
-        max-height: calc(100vh - 28px);
+        top: 84px;
+        max-height: calc(100vh - 104px);
         overflow: auto;
         padding: 14px;
       }
 
       .workspace-results {
-        min-height: calc(100vh - 28px);
-        padding: 14px;
+        min-height: calc(100vh - 104px);
+        padding: 16px;
       }
 
       .stack {
@@ -1341,11 +1463,56 @@
 
       .tabs {
         position: sticky;
-        top: 0;
-        z-index: 3;
+        top: 76px;
+        z-index: 12;
         background: var(--surface);
-        margin: -14px -14px 14px;
-        padding: 10px 14px 0;
+        margin: -16px -16px 16px;
+        padding: 10px 16px 0;
+      }
+
+      .result-shell {
+        gap: 16px;
+      }
+
+      .result-priority {
+        grid-template-columns: minmax(0, 1.16fr) minmax(360px, 0.84fr);
+        grid-template-areas:
+          "decision action"
+          "decision paths";
+      }
+
+      .decision-card {
+        grid-area: decision;
+        min-height: 100%;
+      }
+
+      .action-card {
+        grid-area: action;
+      }
+
+      .dual-conclusion {
+        grid-area: paths;
+      }
+
+      .result-evidence {
+        grid-template-columns: minmax(0, 1fr) minmax(360px, 0.78fr);
+        align-items: start;
+      }
+
+      .result-evidence > .roadmap-card {
+        grid-row: span 3;
+      }
+
+      .result-evidence > section:not(.roadmap-card):not(.explanation-card) {
+        grid-column: 2;
+      }
+
+      .result-evidence > .explanation-card {
+        grid-column: 2;
+      }
+
+      .result-evidence > details.report-detail {
+        grid-column: 1 / -1;
       }
 
       .kpis {
@@ -1371,7 +1538,7 @@
       }
 
       .decision-metrics {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
       }
 
@@ -1385,7 +1552,15 @@
       }
 
       .chart-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .roadmap-list {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .roadmap-step {
+        grid-template-columns: 30px 1fr;
       }
     }
 
@@ -1413,7 +1588,7 @@
         <div class="top-actions">
           <a class="text-link" href="/help" data-track="home_help_click">使用教程</a>
           <a class="text-link" href="/pricing">价格方案</a>
-          <a class="text-link" href="mailto:bing117119@gmail.com">联系我们</a>
+          <button class="nav-button" id="contactBtn" type="button">联系我们</button>
         </div>
       </div>
       <div class="workflow" aria-label="产品流程">
@@ -1655,6 +1830,36 @@
 
       </section>
     </main>
+  </div>
+
+  <div id="contactModal" class="contact-modal hidden" role="dialog" aria-modal="true" aria-labelledby="contactTitle">
+    <div class="contact-dialog">
+      <div class="contact-head">
+        <div>
+          <h2 id="contactTitle">联系我</h2>
+          <p>有任何使用、数据导入、报告判断或付费开通问题，都可以通过下面方式联系我。</p>
+        </div>
+        <button class="contact-close" id="contactCloseBtn" type="button" aria-label="关闭联系方式">×</button>
+      </div>
+      <div class="contact-body">
+        <div class="contact-row">
+          <strong>邮箱</strong>
+          <span>待补充</span>
+        </div>
+        <div class="contact-row">
+          <strong>微信</strong>
+          <span>待补充</span>
+        </div>
+        <div class="contact-row">
+          <strong>Telegram</strong>
+          <span>待补充</span>
+        </div>
+        <div class="contact-row">
+          <strong>Discord</strong>
+          <span>待补充</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -4290,6 +4495,8 @@ B0A100001,24-8,1,3,5000,30,10,10,10,289.13,0,33,0,167,0.2,6,10,0,45,0`;
       const explanation = result.explanation || result.templateExplanation || generateTemplateExplanation(result.decisionTags || [], result.decision, result);
 
       report.innerHTML = `
+        <div class="result-shell">
+        <div class="result-priority">
         <section class="decision-card ${decisionView.level}">
           <div class="decision-head">
             <div>
@@ -4324,7 +4531,9 @@ B0A100001,24-8,1,3,5000,30,10,10,10,289.13,0,33,0,167,0.2,6,10,0,45,0`;
             <p>${tailPath.advice}</p>
           </div>
         </section>
+        </div>
 
+        <div class="result-evidence">
         <section class="roadmap-card">
           <h2>产品路线图</h2>
           <p>${escapeHtml(roadmap.summary)}</p>
@@ -4514,6 +4723,8 @@ B0A100001,24-8,1,3,5000,30,10,10,10,289.13,0,33,0,167,0.2,6,10,0,45,0`;
             </div>
           </div>
         </details>
+        </div>
+        </div>
       `;
       maybeEnhanceExplanation(result);
     }
@@ -5819,6 +6030,17 @@ B0A100001,24-8,1,3,5000,30,10,10,10,289.13,0,33,0,167,0.2,6,10,0,45,0`;
     });
     $("registerBtn").addEventListener("click", register);
     $("loginBtn").addEventListener("click", login);
+    $("contactBtn").addEventListener("click", () => {
+      $("contactModal").classList.remove("hidden");
+      analytics.track("contact_modal_open");
+    });
+    $("contactCloseBtn").addEventListener("click", () => $("contactModal").classList.add("hidden"));
+    $("contactModal").addEventListener("click", event => {
+      if (event.target === $("contactModal")) $("contactModal").classList.add("hidden");
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") $("contactModal").classList.add("hidden");
+    });
     $("quickReportBtn").addEventListener("click", renderQuickReport);
     $("quickKeyword").addEventListener("keydown", event => {
       if (event.key === "Enter") renderQuickReport();
