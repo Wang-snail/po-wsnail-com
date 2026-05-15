@@ -226,7 +226,7 @@
 
     <main>
       <h1>微信扫码支付</h1>
-      <p id="paymentIntro">支付成功后系统会自动到账并增加分析次数。无需截图、无需联系开发者、无需人工确认。</p>
+      <p id="paymentIntro">系统会优先创建自动支付订单；自动通道不可用时，会保留人工核对开通。</p>
 
       <div class="layout">
         <section class="panel">
@@ -321,6 +321,7 @@
       const amount = view.amount_yuan || view.amount || Number(view.amount_cents || 0) / 100;
       const pay = payment || view.payment || view;
       const manualReview = Boolean(pay.manual_review || view.status === "pending_review");
+      const provider = pay.provider || view.payment_provider || "";
       const qrSrc = pay.qrcode || view.payment_qrcode || "";
       const payUrl = pay.pay_url || view.pay_url || qrSrc || "";
       paymentQr.style.display = qrSrc ? "" : "none";
@@ -329,8 +330,8 @@
       qrPlaceholder.style.display = qrSrc ? "none" : "flex";
       qrPlaceholder.textContent = ["paid", "approved"].includes(view.status) ? "订单已支付并开通" : "支付二维码生成中或暂不可用";
       paymentIntro.textContent = manualReview
-        ? "当前自动支付通道暂未配置，付款后会进入人工核对；管理员确认到账后次数会开通。"
-        : "支付成功后系统会自动到账并增加分析次数。无需截图、无需联系开发者、无需人工确认。";
+        ? "当前订单走人工核对：请扫码付款，管理员确认到账后次数会开通。"
+        : "当前订单走自动支付通道。支付成功后系统会自动到账并增加分析次数。";
       document.getElementById("payLinkWrap").style.display = payUrl ? "block" : "none";
       document.getElementById("payLink").href = payUrl || "#";
       summary.innerHTML = `
@@ -338,6 +339,7 @@
         <div class="line"><span>套餐</span><strong>${view.product_name || view.productName || view.product_id || "-"}</strong></div>
         <div class="line"><span>权益</span><strong>${view.desc || (view.subscription_quota ? view.subscription_quota + " 次月卡额度" : (view.credits ? view.credits + " 次完整分析" : "-"))}</strong></div>
         <div class="line"><span>金额</span><strong>¥${Number(amount || 0).toLocaleString("zh-CN")}</strong></div>
+        <div class="line"><span>通道</span><strong>${manualReview ? "人工核对" : (provider === "bufpay" ? "BufPay 自动支付" : "自动支付")}</strong></div>
         <div class="line"><span>状态</span><strong>${manualReview ? "待人工核对" : statusText(view.status)}</strong></div>
         <div class="line"><span>提交时间</span><strong>${view.submitted_at ? new Date(view.submitted_at).toLocaleString("zh-CN") : "-"}</strong></div>
         <div class="line"><span>支付时间</span><strong>${view.paid_at ? new Date(view.paid_at).toLocaleString("zh-CN") : "-"}</strong></div>

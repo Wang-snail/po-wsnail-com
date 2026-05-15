@@ -31,6 +31,7 @@ export default {
       if (request.method === "POST" && url.pathname === "/api/reports/consume") return await handleConsumeReport(request, env);
       if (request.method === "POST" && url.pathname === "/api/pay/create") return await handlePayCreate(request, env, ctx);
       if (request.method === "POST" && url.pathname === "/api/pay/callback") return await handlePayCallback(request, env);
+      if (request.method === "POST" && url.pathname === "/api/pay/bufpay/callback") return await handleBufPayCallback(request, env);
       if (request.method === "POST" && url.pathname === "/api/orders/manual-create") return await handleManualCreateOrder(request, env, ctx);
       if (request.method === "GET" && url.pathname === "/api/orders/status") return await handleOrderStatus(request, env);
       if (request.method === "GET" && url.pathname === "/api/admin/orders/approve") return await handleAdminReview(request, env, "approved");
@@ -249,8 +250,8 @@ async function handleManualCreateOrder(request, env, ctx) {
   const submittedAt = nowIso();
   await db.prepare(`
     INSERT INTO po_orders
-      (order_no, user_id, product_id, product_type, amount_cents, credits, subscription_quota, status, submitted_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_review', ?)
+      (order_no, user_id, product_id, product_type, amount_cents, credits, subscription_quota, status, submitted_at, payment_provider)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_review', ?, 'manual')
   `).bind(orderNo, user.id, productId, product.product_type, product.amount_cents, product.credits, product.subscription_quota, submittedAt).run();
   const order = await db.prepare("SELECT * FROM po_orders WHERE order_no = ?").bind(orderNo).first();
   ctx.waitUntil(notifyAdmin(order, user, env).catch(error => console.error("notify failed", error)));
@@ -265,7 +266,9 @@ async function handlePayCreate(request, env, ctx) {
   const productId = String(body.productId || body.product_id || "");
   const product = PRODUCTS[productId];
   if (!product) return jsonResponse({ success: false, error: "未知套餐" }, 400);
-  if (!env.PAYJS_MCHID || !env.PAYJS_KEY) return await createManualFallbackOrder(request, env, ctx, db, user, productId, product);
+  const provider = preferredPaymentProvider(env);
+  if (provider === "bufpay") return await createBufPayOrder(request, env, ctx, db, user, productId, product);
+  if (provider !== "payjs") return await createManualFallbackOrder(request, env, ctx, db, user, productId, product);
 
   const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, "+00:00");
   const existing = await db.prepare(`
@@ -282,8 +285,8 @@ async function handlePayCreate(request, env, ctx) {
   const createdAt = nowIso();
   await db.prepare(`
     INSERT INTO po_orders
-      (order_no, user_id, product_id, product_type, amount_cents, credits, subscription_quota, status, paid, submitted_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, ?)
+      (order_no, user_id, product_id, product_type, amount_cents, credits, subscription_quota, status, paid, submitted_at, payment_provider)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, ?, 'payjs')
   `).bind(orderNo, user.id, productId, product.product_type, product.amount_cents, product.credits, product.subscription_quota, createdAt).run();
 
   const base = (env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "");
@@ -320,6 +323,75 @@ async function handlePayCreate(request, env, ctx) {
   return jsonResponse({ success: true, reused: false, order: publicOrder(order), payment: publicPayment(order), user: publicUser(user) });
 }
 
+async function createBufPayOrder(request, env, ctx, db, user, productId, product) {
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, "+00:00");
+  const existing = await db.prepare(`
+    SELECT * FROM po_orders
+    WHERE user_id = ? AND product_id = ? AND status = 'pending' AND paid = 0
+      AND created_at >= ? AND payment_provider = 'bufpay'
+    ORDER BY id DESC LIMIT 1
+  `).bind(user.id, productId, tenMinutesAgo).first();
+  if (existing?.payment_qrcode || existing?.pay_url) {
+    return jsonResponse({ success: true, reused: true, order: publicOrder(existing), payment: publicPayment(existing), user: publicUser(user) });
+  }
+
+  const orderNo = `BUF_${formatOrderTime(new Date())}_${randomHex(3).toUpperCase()}`;
+  const createdAt = nowIso();
+  await db.prepare(`
+    INSERT INTO po_orders
+      (order_no, user_id, product_id, product_type, amount_cents, credits, subscription_quota, status, paid, submitted_at, payment_provider)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, ?, 'bufpay')
+  `).bind(orderNo, user.id, productId, product.product_type, product.amount_cents, product.credits, product.subscription_quota, createdAt).run();
+
+  const base = (env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "");
+  const feedbackUrl = "";
+  const payload = {
+    name: product.name,
+    pay_type: String(env.BUFPAY_PAY_TYPE || "wechat").toLowerCase() === "alipay" ? "alipay" : "wechat",
+    price: formatYuan(product.amount_cents),
+    order_id: orderNo,
+    order_uid: String(user.user_uid || generateUserUid(user.id)),
+    notify_url: `${base}/api/pay/bufpay/callback`,
+    return_url: `${base}/orders?orderNo=${encodeURIComponent(orderNo)}`,
+    feedback_url: feedbackUrl
+  };
+  payload.sign = bufpayCreateSign(payload, env.BUFPAY_SECRET || "");
+
+  const endpoint = `${bufpayBaseUrl(env)}/api/pay/${encodeURIComponent(String(env.BUFPAY_AID || ""))}`;
+  try {
+    const payResponse = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(payload).toString()
+    });
+    const payText = await payResponse.text();
+    const payData = parseMaybeJson(payText);
+    if (!payResponse.ok || !bufpaySuccess(payData)) {
+      await db.prepare("UPDATE po_orders SET status = 'failed', processed_at = ? WHERE order_no = ?").bind(nowIso(), orderNo).run();
+      console.error("bufpay create failed", payResponse.status, String(payText || "").slice(0, 500));
+      return await createManualFallbackOrder(request, env, ctx, db, user, productId, product);
+    }
+
+    const payInfo = extractBufpayPayment(payData);
+    if (!payInfo.qrcode && !payInfo.payUrl) {
+      await db.prepare("UPDATE po_orders SET status = 'failed', processed_at = ? WHERE order_no = ?").bind(nowIso(), orderNo).run();
+      console.error("bufpay create missing payment payload", String(payText || "").slice(0, 500));
+      return await createManualFallbackOrder(request, env, ctx, db, user, productId, product);
+    }
+    await db.prepare(`
+      UPDATE po_orders
+      SET provider_order_id = ?, payment_qrcode = ?, pay_url = ?, transaction_id = ?
+      WHERE order_no = ?
+    `).bind(payInfo.providerOrderId, payInfo.qrcode, payInfo.payUrl, payInfo.providerOrderId, orderNo).run();
+    const order = await db.prepare("SELECT * FROM po_orders WHERE order_no = ?").bind(orderNo).first();
+    return jsonResponse({ success: true, reused: false, order: publicOrder(order), payment: publicPayment(order), user: publicUser(user) });
+  } catch (error) {
+    await db.prepare("UPDATE po_orders SET status = 'failed', processed_at = ? WHERE order_no = ?").bind(nowIso(), orderNo).run();
+    console.error("bufpay create exception", error);
+    return await createManualFallbackOrder(request, env, ctx, db, user, productId, product);
+  }
+}
+
 async function createManualFallbackOrder(request, env, ctx, db, user, productId, product) {
   const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, "+00:00");
   const existing = await db.prepare(`
@@ -347,8 +419,8 @@ async function createManualFallbackOrder(request, env, ctx, db, user, productId,
   const qrPath = `/public/payment/${productId}.jpg`;
   await db.prepare(`
     INSERT INTO po_orders
-      (order_no, user_id, product_id, product_type, amount_cents, credits, subscription_quota, status, paid, payment_qrcode, pay_url, submitted_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_review', 0, ?, ?, ?)
+      (order_no, user_id, product_id, product_type, amount_cents, credits, subscription_quota, status, paid, payment_qrcode, pay_url, submitted_at, payment_provider)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_review', 0, ?, ?, ?, 'manual')
   `).bind(orderNo, user.id, productId, product.product_type, product.amount_cents, product.credits, product.subscription_quota, qrPath, `${base}${qrPath}`, submittedAt).run();
   const order = await db.prepare("SELECT * FROM po_orders WHERE order_no = ?").bind(orderNo).first();
   ctx.waitUntil(notifyAdmin(order, user, env).catch(error => console.error("notify failed", error)));
@@ -414,6 +486,65 @@ async function handlePayCallback(request, env) {
     }
   }
   return new Response("success", { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+}
+
+async function handleBufPayCallback(request, env) {
+  const db = await poDb(env);
+  const params = await readPayjsCallback(request);
+  if (!verifyBufpaySign(params, env.BUFPAY_SECRET || "")) {
+    return new Response("sign error", { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  }
+
+  const orderNo = String(params.order_id || "");
+  const providerOrderId = String(params.aoid || "");
+  const order = await db.prepare("SELECT * FROM po_orders WHERE order_no = ?").bind(orderNo).first();
+  if (!order) return new Response("order not found", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  if ((order.payment_provider && order.payment_provider !== "bufpay") || (!order.payment_provider && !orderNo.startsWith("BUF_"))) {
+    return new Response("provider error", { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  }
+
+  const expectedCents = Number(order.amount_cents || 0);
+  const priceCents = yuanToCents(params.price);
+  const paidCents = yuanToCents(params.pay_price || params.price);
+  if (priceCents !== expectedCents || paidCents < expectedCents) {
+    await db.prepare("UPDATE po_orders SET status = 'failed', processed_at = ? WHERE order_no = ?").bind(nowIso(), orderNo).run();
+    return new Response("amount error", { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  }
+
+  if (Number(order.paid || 0) === 1 || ["paid", "approved"].includes(order.status)) {
+    return new Response("ok", { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  }
+
+  const paidAt = nowIso();
+  const claimed = await db.prepare(`
+    UPDATE po_orders
+    SET status = 'processing',
+        transaction_id = COALESCE(NULLIF(?, ''), transaction_id),
+        provider_order_id = COALESCE(NULLIF(?, ''), provider_order_id),
+        payment_provider = COALESCE(payment_provider, 'bufpay')
+    WHERE order_no = ? AND paid = 0 AND status NOT IN ('paid', 'approved', 'processing')
+  `).bind(providerOrderId, providerOrderId, orderNo).run();
+  if (Number(claimed?.meta?.changes || 0) > 0) {
+    try {
+      await db.batch([
+        ...orderBenefitStatements(db, order, "bufpay_paid"),
+        db.prepare("UPDATE po_orders SET status = 'paid', paid = 1, paid_at = ?, processed_at = ? WHERE order_no = ?")
+          .bind(paidAt, paidAt, orderNo)
+      ]);
+      await db.prepare("INSERT INTO po_user_events (user_id, event, ip, user_agent) VALUES (?, 'bufpay_paid', ?, ?)")
+        .bind(order.user_id, request.headers.get("CF-Connecting-IP") || "", request.headers.get("User-Agent") || "").run();
+    } catch (error) {
+      await db.prepare("UPDATE po_orders SET status = 'failed', processed_at = ? WHERE order_no = ? AND status = 'processing'")
+        .bind(nowIso(), orderNo).run();
+      throw error;
+    }
+  } else {
+    const current = await db.prepare("SELECT status, paid FROM po_orders WHERE order_no = ?").bind(orderNo).first();
+    if (!(Number(current?.paid || 0) === 1 || ["paid", "approved"].includes(current?.status))) {
+      return new Response("processing", { status: 409, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+    }
+  }
+  return new Response("ok", { headers: { "Content-Type": "text/plain; charset=utf-8" } });
 }
 
 async function handleOrderStatus(request, env) {
@@ -588,6 +719,8 @@ async function ensurePoSchema(db) {
       status TEXT NOT NULL DEFAULT 'pending',
       paid INTEGER NOT NULL DEFAULT 0,
       transaction_id TEXT,
+      payment_provider TEXT,
+      provider_order_id TEXT,
       payjs_order_id TEXT,
       payment_qrcode TEXT,
       pay_url TEXT,
@@ -630,6 +763,8 @@ async function ensurePoColumns(db) {
     ["po_users", "email_bonus_claimed", "INTEGER NOT NULL DEFAULT 0"],
     ["po_orders", "paid", "INTEGER NOT NULL DEFAULT 0"],
     ["po_orders", "payjs_order_id", "TEXT"],
+    ["po_orders", "payment_provider", "TEXT"],
+    ["po_orders", "provider_order_id", "TEXT"],
     ["po_orders", "payment_qrcode", "TEXT"],
     ["po_orders", "pay_url", "TEXT"]
   ];
@@ -692,6 +827,8 @@ function publicOrder(order) {
     subscription_quota: Number(order.subscription_quota || 0),
     status: order.status,
     paid: Boolean(Number(order.paid || 0)) || ["paid", "approved"].includes(order.status),
+    payment_provider: order.payment_provider || paymentProviderFromOrder(order),
+    provider_order_id: order.provider_order_id || "",
     payjs_order_id: order.payjs_order_id || "",
     payment_qrcode: order.payment_qrcode || "",
     pay_url: order.pay_url || "",
@@ -708,15 +845,25 @@ function publicAdminOrder(order) {
 
 function publicPayment(order) {
   const payjsOrderId = order.payjs_order_id || "";
+  const provider = order.payment_provider || paymentProviderFromOrder(order);
   return {
     order_no: order.order_no,
+    provider,
     qrcode: order.payment_qrcode || "",
     pay_url: order.pay_url || order.payment_qrcode || "",
     payjs_order_id: payjsOrderId,
-    manual_review: !payjsOrderId && order.status === "pending_review",
+    provider_order_id: order.provider_order_id || "",
+    manual_review: provider === "manual" || (!payjsOrderId && order.status === "pending_review"),
     amount_cents: Number(order.amount_cents || 0),
     amount_yuan: Number(order.amount_cents || 0) / 100
   };
+}
+
+function paymentProviderFromOrder(order) {
+  if (order.payjs_order_id) return "payjs";
+  if (order.provider_order_id) return "bufpay";
+  if (order.status === "pending_review") return "manual";
+  return "";
 }
 
 function validAdmin(request, env) {
@@ -981,6 +1128,70 @@ function analyticsDb(env) {
   return env.ANALYTICS_DB || env.po_chat_logs || null;
 }
 
+function preferredPaymentProvider(env) {
+  const configured = String(env.PAY_PROVIDER || "").trim().toLowerCase();
+  if (configured === "bufpay") return bufpayConfigured(env) ? "bufpay" : "manual";
+  if (configured === "payjs") return payjsConfigured(env) ? "payjs" : "manual";
+  if (bufpayConfigured(env)) return "bufpay";
+  if (payjsConfigured(env)) return "payjs";
+  return "manual";
+}
+
+function bufpayConfigured(env) {
+  return Boolean(env.BUFPAY_AID && env.BUFPAY_SECRET);
+}
+
+function payjsConfigured(env) {
+  return Boolean(env.PAYJS_MCHID && env.PAYJS_KEY);
+}
+
+function bufpayBaseUrl(env) {
+  return String(env.BUFPAY_BASE_URL || "https://bufpay.com").replace(/\/$/, "");
+}
+
+function formatYuan(amountCents) {
+  return (Number(amountCents || 0) / 100).toFixed(2);
+}
+
+function yuanToCents(value) {
+  const normalized = String(value || "").replace(/[^\d.]/g, "");
+  if (!normalized) return 0;
+  return Math.round(Number(normalized) * 100);
+}
+
+function parseMaybeJson(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw: text };
+  }
+}
+
+function bufpaySuccess(data) {
+  if (!data || data.error || data.message === "error") return false;
+  if (data.errmsg && !/success|ok/i.test(String(data.errmsg))) return false;
+  const code = data.code ?? data.status ?? data.return_code ?? data.errcode;
+  if (code === undefined || code === null || code === "") return Boolean(data.data || data.pay_url || data.url || data.qrcode || data.qr_img || data.jump_url);
+  const normalized = String(code).toLowerCase();
+  return ["0", "1", "200", "success", "ok", "true"].includes(normalized);
+}
+
+function extractBufpayPayment(data) {
+  const source = data?.data && typeof data.data === "object" ? data.data : data || {};
+  const providerOrderId = String(source.aoid || source.bufpay_order_id || source.order_id || source.id || "");
+  const qrcode = normalizePaymentImage(source.qr_img || source.qrcode || source.qr_code || source.qrCode || source.code_url || source.payment_qrcode || "");
+  const payUrl = String(source.jump_url || source.pay_url || source.url || source.payment_url || source.cashier_url || source.code_url || "");
+  return { providerOrderId, qrcode, payUrl };
+}
+
+function normalizePaymentImage(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^(data:image\/|https?:\/\/|\/)/i.test(raw)) return raw;
+  if (/^[A-Za-z0-9+/=\s]+$/.test(raw) && raw.length > 128) return `data:image/jpeg;base64,${raw.replace(/\s+/g, "")}`;
+  return raw;
+}
+
 async function readJson(request) {
   const size = Number(request.headers.get("content-length") || 0);
   if (size > 1024 * 1024) throw new Error("请求体过大");
@@ -1008,6 +1219,36 @@ function payjsSign(params, key) {
 function verifyPayjsSign(params, key) {
   if (!key || !params?.sign) return false;
   return timingSafeEqual(payjsSign(params, key), String(params.sign || "").toUpperCase());
+}
+
+function bufpayCreateSign(params, secret) {
+  return md5([
+    params.name,
+    params.pay_type,
+    params.price,
+    params.order_id,
+    params.order_uid,
+    params.notify_url,
+    params.return_url,
+    params.feedback_url || "",
+    secret
+  ].map(value => String(value ?? "")).join(""));
+}
+
+function bufpayCallbackSign(params, secret) {
+  return md5([
+    params.aoid,
+    params.order_id,
+    params.order_uid,
+    params.price,
+    params.pay_price,
+    secret
+  ].map(value => String(value ?? "")).join(""));
+}
+
+function verifyBufpaySign(params, secret) {
+  if (!secret || !params?.sign) return false;
+  return timingSafeEqual(bufpayCallbackSign(params, secret).toLowerCase(), String(params.sign || "").toLowerCase());
 }
 
 async function hashPassword(password) {
