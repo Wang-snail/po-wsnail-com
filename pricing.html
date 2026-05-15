@@ -28,6 +28,7 @@
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, "Microsoft YaHei", sans-serif;
+      font-size: 16px;
       line-height: 1.6;
     }
 
@@ -71,7 +72,7 @@
     }
 
     .hero {
-      padding: 44px 0 30px;
+      padding: 34px 0 24px;
       border-bottom: 1px solid var(--border);
     }
 
@@ -97,8 +98,19 @@
     .lead {
       max-width: 760px;
       margin: 14px 0 0;
-      color: var(--muted);
+      color: #334155;
       font-size: 17px;
+    }
+
+    .free-note {
+      display: inline-flex;
+      margin-top: 18px;
+      border: 1px solid #bbf7d0;
+      border-radius: 999px;
+      background: #f0fdf4;
+      color: #14532d;
+      padding: 8px 12px;
+      font-weight: 900;
     }
 
     .pricing {
@@ -241,54 +253,50 @@
 
     <main>
       <section class="hero">
-        <p class="eyebrow">本地测试版价格页</p>
-        <h1>按选品验证阶段购买，不把工具做重</h1>
-        <p class="lead">价格页先用于测试转化路径。免费次数用完后，可以购买单次报告、5 次包，或开通月卡。</p>
+        <p class="eyebrow">价格方案</p>
+        <h1>免费次数用完后，按分析频率购买</h1>
+        <p class="lead">只为生成完整报告扣次数。ROI 参数调整、查看样例和修改上传数据不扣次数。</p>
+        <div class="free-note">新用户注册登录免费 3 次，验证邮箱额外赠送 5 次</div>
       </section>
 
       <section class="compare">
         <h2>当前账号权益</h2>
-        <div id="userStatus">未登录。请先在首页或购买页用账号密码登录。</div>
+        <div id="userStatus">未登录。登录后可查看免费次数、付费次数和月卡剩余额度。</div>
       </section>
 
       <section class="pricing" aria-label="价格方案">
         <article class="plan">
           <h2>单次报告</h2>
-          <p>适合临时验证一个产品机会。</p>
+          <p>临时验证一个产品机会。</p>
           <div class="price"><strong>¥19.9</strong><span>/ 1 次</span></div>
           <ul>
-            <li>获得 1 个 credits</li>
-            <li>可生成 1 份新品机会判断报告</li>
+            <li>1 次完整分析</li>
             <li>适合低频补充使用</li>
           </ul>
-          <a class="button secondary" href="/checkout?product=report_1">购买单次</a>
+          <a class="button secondary" href="/checkout?product=report_1">立即购买</a>
         </article>
 
         <article class="plan featured">
           <span class="badge">主推</span>
           <h2>5 次包</h2>
-          <p>适合一轮选品集中筛选。</p>
+          <p>一轮选品集中筛选。</p>
           <div class="price"><strong>¥99</strong><span>/ 5 次</span></div>
           <ul>
-            <li>获得 5 个 credits</li>
-            <li>单次成本低于单买</li>
+            <li>5 次完整分析</li>
             <li>适合批量比较多个产品</li>
-            <li>点数不过期，本地测试版先不限制有效期</li>
           </ul>
-          <a class="button" href="/checkout?product=report_5">购买 5 次包</a>
+          <a class="button" href="/checkout?product=report_5">立即购买</a>
         </article>
 
         <article class="plan">
           <h2>月卡</h2>
-          <p>适合持续找品和每天复盘。</p>
+          <p>持续找品和每天复盘。</p>
           <div class="price"><strong>¥100</strong><span>/ 月</span></div>
           <ul>
-            <li>subscription_type = monthly</li>
-            <li>30 天有效期</li>
-            <li>subscription_quota = 50</li>
-            <li>每次生成报告扣 1 次月卡额度</li>
+            <li>30 天有效</li>
+            <li>50 次完整分析额度</li>
           </ul>
-          <a class="button secondary" href="/checkout?product=monthly">开通月卡</a>
+          <a class="button secondary" href="/checkout?product=monthly">立即购买</a>
         </article>
       </section>
 
@@ -305,14 +313,14 @@
           </thead>
           <tbody>
             <tr><td>价格</td><td>¥19.9</td><td>¥99</td><td>¥100/月</td></tr>
-            <tr><td>到账权益</td><td>1 credits</td><td>5 credits</td><td>50 次月卡额度</td></tr>
-            <tr><td>扣减优先级</td><td>free 后使用</td><td>free/月卡后使用</td><td>free 后优先于 credits</td></tr>
+            <tr><td>到账权益</td><td>1 次完整分析</td><td>5 次完整分析</td><td>50 次月卡额度</td></tr>
+            <tr><td>扣减优先级</td><td>免费次数用完后使用</td><td>免费/月卡后使用</td><td>免费次数后优先使用</td></tr>
             <tr><td>适用对象</td><td>偶尔验证</td><td>集中选品</td><td>持续测款</td></tr>
           </tbody>
         </table>
       </section>
 
-      <p class="note">当前是本地购买流程原型，不接真实支付网关，也不会创建真实订单。</p>
+      <p class="note">当前采用微信扫码付款 + 后台确认开通。你付款后点击“我已完成支付”，确认到账后次数自动开通。</p>
     </main>
   </div>
   <script>
