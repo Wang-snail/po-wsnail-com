@@ -201,8 +201,8 @@
     </header>
 
     <main>
-      <h1>确认套餐并扫码付款</h1>
-      <p>选择套餐，使用邮箱登录或注册，然后进入微信收款码页面。</p>
+      <h1>确认套餐并自动创建支付订单</h1>
+      <p>选择套餐，使用邮箱登录或注册后，系统会创建 PayJS 微信支付订单并显示二维码。付款成功后次数自动到账。</p>
       <div class="free-note">新用户注册登录免费 3 次；验证邮箱后额外赠送 5 次。购买只在免费次数用完后需要。</div>
 
       <div class="layout" style="margin-top:18px;">
@@ -213,7 +213,7 @@
               <div>
                 <label for="product">套餐</label>
                 <select id="product" name="product">
-                  <option value="report_1">单次报告 ¥19.9</option>
+                  <option value="report_1">单次报告 ¥29.9</option>
                   <option value="report_5">5次包 ¥99</option>
                   <option value="monthly">月卡 ¥100/月</option>
                 </select>
@@ -232,7 +232,7 @@
             </div>
             <div id="loginStatus" class="note">首次邮箱会自动创建账号；老用户使用同一邮箱和密码继续登录。</div>
             <div style="margin-top:16px;">
-              <button class="button" type="submit">去扫码付款</button>
+              <button class="button" type="submit">创建支付二维码</button>
             </div>
           </form>
         </section>
@@ -240,7 +240,7 @@
         <aside class="panel">
           <h2>订单摘要</h2>
           <div id="summary" class="summary"></div>
-          <p class="note">付款页会展示对应套餐的微信收款码。扫码付款后点击“我已完成支付”，等待确认到账。</p>
+          <p class="note">支付成功后 PayJS 会自动通知系统发放次数；无需截图，也无需联系开发者。</p>
         </aside>
       </div>
     </main>
@@ -249,7 +249,7 @@
   <script>
     const TOKEN_KEY = "po_auth_token";
     const products = {
-      report_1: { name: "单次报告", amount: 19.9, credits: 1, desc: "到账 1 次完整分析" },
+      report_1: { name: "单次报告", amount: 29.9, credits: 1, desc: "到账 1 次完整分析" },
       report_5: { name: "5次包", amount: 99, credits: 5, desc: "到账 5 次完整分析" },
       monthly: { name: "月卡", amount: 100, credits: 50, desc: "30 天内 50 次完整分析额度" }
     };
@@ -340,9 +340,12 @@
         return;
       }
       try {
-        await api("/api/user/me", { method: "GET" });
-        localStorage.setItem("po_order_draft", JSON.stringify(order));
-        location.href = "/orders?product=" + encodeURIComponent(order.product_id);
+        const data = await api("/api/pay/create", {
+          method: "POST",
+          body: JSON.stringify({ productId: order.product_id })
+        });
+        localStorage.setItem("po_order_draft", JSON.stringify({ ...order, ...data.order, payment: data.payment }));
+        location.href = "/orders?orderNo=" + encodeURIComponent(data.order.order_no);
       } catch (error) {
         loginStatus.textContent = error.message;
       }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>提交付款信息｜亚马逊新品机会判断器</title>
+  <title>微信支付｜亚马逊新品机会判断器</title>
   <meta name="robots" content="noindex, nofollow">
   <style>
     :root {
@@ -225,24 +225,25 @@
     </header>
 
     <main>
-      <h1>扫码付款并提交确认</h1>
-      <p>扫码付款后点击“我已完成支付”。管理员核对金额和时间后，会自动开通点数或月卡。</p>
+      <h1>微信扫码支付</h1>
+      <p>支付成功后系统会自动到账并增加分析次数。无需截图、无需联系开发者、无需人工确认。</p>
 
       <div class="layout">
         <section class="panel">
-          <h2>付款确认</h2>
+          <h2>支付二维码</h2>
           <form id="paymentForm">
             <div id="paymentPreview"></div>
             <div class="qr-grid">
               <div class="qr-card">
-                <strong id="qrTitle">微信收款码</strong>
-                <div><img id="paymentQr" src="/public/payment/report_5.jpg" alt="微信收款码" onerror="this.style.display='none'; this.parentElement.nextElementSibling.style.display='flex';"></div>
-                <div id="qrPlaceholder" class="qr-placeholder">请放置 public/payment/report_5.jpg</div>
+                <strong id="qrTitle">微信支付二维码</strong>
+                <div><img id="paymentQr" src="" alt="微信支付二维码" onerror="this.style.display='none'; this.parentElement.nextElementSibling.style.display='flex';"></div>
+                <div id="qrPlaceholder" class="qr-placeholder">正在创建支付二维码...</div>
+                <p id="payLinkWrap" style="display:none;"><a id="payLink" href="#" target="_blank" rel="noopener">打开支付链接</a></p>
               </div>
             </div>
-            <p class="note">不需要上传付款截图。系统会记录服务器提交时间，管理员按收款记录中的时间和金额核对。</p>
+            <p class="note">页面会每 5 秒自动检查支付状态。付款成功后，次数会自动到账。</p>
             <div style="margin-top:16px;">
-              <button class="button" type="submit">我已完成支付</button>
+              <button class="button" type="submit">创建 / 刷新支付二维码</button>
             </div>
           </form>
           <div id="result" class="note success" style="display:none;"></div>
@@ -251,7 +252,7 @@
         <aside class="panel">
           <h2>订单摘要</h2>
           <div id="summary"></div>
-          <p class="note">没有订单草稿时，请先从价格页选择方案。</p>
+          <p class="note">如果二维码未显示，请返回价格页重新选择套餐。</p>
         </aside>
       </div>
     </main>
@@ -267,7 +268,7 @@
     const paymentQr = document.getElementById("paymentQr");
     const qrTitle = document.getElementById("qrTitle");
     const qrPlaceholder = document.getElementById("qrPlaceholder");
-    let currentOrderNo = params.get("order_no") || "";
+    let currentOrderNo = params.get("orderNo") || params.get("order_no") || "";
     let pollTimer = null;
 
     function token() {
@@ -284,15 +285,9 @@
     }
 
     const products = {
-      report_1: { productName: "单次报告", amount: 19.9, desc: "到账 1 credits" },
-      report_5: { productName: "5次报告包", amount: 99, desc: "到账 5 credits" },
-      monthly: { productName: "月卡", amount: 100, desc: "30天内 50 次月卡额度" }
-    };
-
-    const paymentQrMap = {
-      report_1: "/public/payment/report_1.jpg",
-      report_5: "/public/payment/report_5.jpg",
-      monthly: "/public/payment/monthly.jpg"
+      report_1: { productName: "单次报告", amount: 29.9, desc: "到账 1 次完整分析" },
+      report_5: { productName: "5次报告包", amount: 99, desc: "到账 5 次完整分析" },
+      monthly: { productName: "月卡", amount: 100, desc: "30 天内 50 次月卡额度" }
     };
 
     function statusText(value) {
@@ -302,6 +297,7 @@
         paid: "已开通，次数已到账",
         rejected: "订单未通过确认",
         failed: "订单异常",
+        processing: "支付确认中",
         pending: "待支付"
       }[value] || value || "-";
     }
@@ -317,21 +313,25 @@
       return { product_id: productId, ...(products[productId] || products.report_5) };
     }
 
-    function renderSummary(order = null) {
+    function renderSummary(order = null, payment = null) {
       const view = order || activeDraft();
       const productId = view.product_id || activeDraft().product_id || "report_5";
       const orderNo = currentOrderNo || view.order_no || "-";
       const amount = view.amount_yuan || view.amount || Number(view.amount_cents || 0) / 100;
-      const qrSrc = paymentQrMap[productId] || paymentQrMap.report_5;
-      paymentQr.style.display = "";
-      paymentQr.src = qrSrc;
-      qrTitle.textContent = `${view.product_name || view.productName || products[productId]?.productName || "套餐"}微信收款码`;
-      qrPlaceholder.style.display = "none";
-      qrPlaceholder.textContent = `请放置 ${qrSrc.replace(/^\//, "")}`;
+      const pay = payment || view.payment || view;
+      const qrSrc = pay.qrcode || view.payment_qrcode || "";
+      const payUrl = pay.pay_url || view.pay_url || qrSrc || "";
+      paymentQr.style.display = qrSrc ? "" : "none";
+      paymentQr.src = qrSrc || "";
+      qrTitle.textContent = `${view.product_name || view.productName || products[productId]?.productName || "套餐"}微信支付二维码`;
+      qrPlaceholder.style.display = qrSrc ? "none" : "flex";
+      qrPlaceholder.textContent = ["paid", "approved"].includes(view.status) ? "订单已支付并开通" : "支付二维码生成中或暂不可用";
+      document.getElementById("payLinkWrap").style.display = payUrl ? "block" : "none";
+      document.getElementById("payLink").href = payUrl || "#";
       summary.innerHTML = `
         <div class="line"><span>订单号</span><strong>${orderNo || "-"}</strong></div>
         <div class="line"><span>套餐</span><strong>${view.product_name || view.productName || view.product_id || "-"}</strong></div>
-        <div class="line"><span>权益</span><strong>${view.desc || (view.subscription_quota ? view.subscription_quota + " 次月卡额度" : (view.credits ? view.credits + " credits" : "-"))}</strong></div>
+        <div class="line"><span>权益</span><strong>${view.desc || (view.subscription_quota ? view.subscription_quota + " 次月卡额度" : (view.credits ? view.credits + " 次完整分析" : "-"))}</strong></div>
         <div class="line"><span>金额</span><strong>¥${Number(amount || 0).toLocaleString("zh-CN")}</strong></div>
         <div class="line"><span>状态</span><strong>${statusText(view.status)}</strong></div>
         <div class="line"><span>提交时间</span><strong>${view.submitted_at ? new Date(view.submitted_at).toLocaleString("zh-CN") : "-"}</strong></div>
@@ -349,17 +349,16 @@
       event.preventDefault();
       try {
         const productId = activeDraft().product_id || params.get("product") || "report_5";
-        const data = await api("/api/orders/manual-create", {
+        const data = await api("/api/pay/create", {
           method: "POST",
           body: JSON.stringify({ productId })
         });
         currentOrderNo = data.order.order_no;
-        localStorage.setItem("po_order_submission", JSON.stringify({ ...activeDraft(), ...data.order, userAccount: data.user.account, userUid: data.user.user_uid }));
-        renderSummary(data.order);
+        history.replaceState(null, "", "/orders?orderNo=" + encodeURIComponent(currentOrderNo));
+        localStorage.setItem("po_order_submission", JSON.stringify({ ...activeDraft(), ...data.order, payment: data.payment, userAccount: data.user.account, userUid: data.user.user_uid }));
+        renderSummary(data.order, data.payment);
         result.style.display = "block";
-        result.textContent = data.reused
-          ? "你已有待确认订单，请等待审核。"
-          : "已提交确认，正在审核中。确认后次数会自动到账，请稍后刷新或等待页面自动更新。";
+        result.textContent = data.reused ? "已复用 10 分钟内的待支付订单，请扫码付款。" : "支付订单已创建，请扫码付款。付款成功后次数会自动到账。";
         startPolling();
       } catch (error) {
         result.style.display = "block";
@@ -371,7 +370,7 @@
       if (!currentOrderNo) return;
       try {
         const data = await api("/api/orders/status?orderNo=" + encodeURIComponent(currentOrderNo), { method: "GET" });
-        renderSummary(data.order);
+        renderSummary(data.order, data.payment);
         localStorage.setItem("po_user_status", JSON.stringify(data.user));
         if (["approved", "paid"].includes(data.order.status)) {
           result.style.display = "block";

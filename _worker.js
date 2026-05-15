@@ -6,7 +6,7 @@ const jsonHeaders = {
 };
 
 const PRODUCTS = {
-  report_1: { product_type: "single", amount_cents: 1990, credits: 1, subscription_quota: 0, name: "单次报告" },
+  report_1: { product_type: "single", amount_cents: 2990, credits: 1, subscription_quota: 0, name: "单次报告" },
   report_5: { product_type: "pack", amount_cents: 9900, credits: 5, subscription_quota: 0, name: "5次报告包" },
   monthly: { product_type: "monthly", amount_cents: 10000, credits: 0, subscription_quota: 50, name: "月卡" }
 };
@@ -29,6 +29,8 @@ export default {
       if (request.method === "GET" && url.pathname === "/api/auth/verify-email") return await handleVerifyEmail(request, env);
       if (request.method === "GET" && ["/api/me", "/api/user/me"].includes(url.pathname)) return await handleMe(request, env);
       if (request.method === "POST" && url.pathname === "/api/reports/consume") return await handleConsumeReport(request, env);
+      if (request.method === "POST" && url.pathname === "/api/pay/create") return await handlePayCreate(request, env);
+      if (request.method === "POST" && url.pathname === "/api/pay/callback") return await handlePayCallback(request, env);
       if (request.method === "POST" && url.pathname === "/api/orders/manual-create") return await handleManualCreateOrder(request, env, ctx);
       if (request.method === "GET" && url.pathname === "/api/orders/status") return await handleOrderStatus(request, env);
       if (request.method === "GET" && url.pathname === "/api/admin/orders/approve") return await handleAdminReview(request, env, "approved");
@@ -253,6 +255,118 @@ async function handleManualCreateOrder(request, env, ctx) {
   return jsonResponse({ success: true, reused: false, message: "已提交确认，正在审核中。", order: publicOrder(order), user: publicUser(user) });
 }
 
+async function handlePayCreate(request, env) {
+  const db = await poDb(env);
+  const user = await requireUser(request, db);
+  if (!user) return jsonResponse({ success: false, error: "请先登录" }, 401);
+  const body = await readJson(request);
+  const productId = String(body.productId || body.product_id || "");
+  const product = PRODUCTS[productId];
+  if (!product) return jsonResponse({ success: false, error: "未知套餐" }, 400);
+  if (!env.PAYJS_MCHID || !env.PAYJS_KEY) {
+    return jsonResponse({ success: false, error: "PayJS 未配置：请设置 PAYJS_MCHID 和 PAYJS_KEY" }, 503);
+  }
+
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, "+00:00");
+  const existing = await db.prepare(`
+    SELECT * FROM po_orders
+    WHERE user_id = ? AND product_id = ? AND status = 'pending' AND paid = 0
+      AND created_at >= ? AND payjs_order_id IS NOT NULL
+    ORDER BY id DESC LIMIT 1
+  `).bind(user.id, productId, tenMinutesAgo).first();
+  if (existing?.payment_qrcode || existing?.pay_url) {
+    return jsonResponse({ success: true, reused: true, order: publicOrder(existing), payment: publicPayment(existing), user: publicUser(user) });
+  }
+
+  const orderNo = `PAY_${formatOrderTime(new Date())}_${randomHex(3).toUpperCase()}`;
+  const createdAt = nowIso();
+  await db.prepare(`
+    INSERT INTO po_orders
+      (order_no, user_id, product_id, product_type, amount_cents, credits, subscription_quota, status, paid, submitted_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, ?)
+  `).bind(orderNo, user.id, productId, product.product_type, product.amount_cents, product.credits, product.subscription_quota, createdAt).run();
+
+  const base = (env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "");
+  const payload = {
+    mchid: String(env.PAYJS_MCHID),
+    total_fee: String(product.amount_cents),
+    out_trade_no: orderNo,
+    body: product.name,
+    notify_url: `${base}/api/pay/callback`,
+    attach: JSON.stringify({ user_id: user.id, product_id: productId }).slice(0, 127)
+  };
+  payload.sign = payjsSign(payload, env.PAYJS_KEY);
+
+  const payResponse = await fetch("https://payjs.cn/api/native", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(payload).toString()
+  });
+  const payData = await payResponse.json().catch(async () => ({ return_msg: await payResponse.text().catch(() => "") }));
+  if (!payResponse.ok || String(payData.return_code) !== "1") {
+    await db.prepare("UPDATE po_orders SET status = 'failed', processed_at = ? WHERE order_no = ?").bind(nowIso(), orderNo).run();
+    return jsonResponse({ success: false, error: payData.return_msg || payData.msg || "PayJS 创建订单失败" }, 502);
+  }
+
+  const payjsOrderId = String(payData.payjs_order_id || payData.transaction_id || "");
+  const qrcode = String(payData.qrcode || payData.code_url || payData.qr_code || "");
+  const payUrl = String(payData.pay_url || payData.code_url || payData.qrcode || "");
+  await db.prepare(`
+    UPDATE po_orders
+    SET payjs_order_id = ?, payment_qrcode = ?, pay_url = ?, transaction_id = ?
+    WHERE order_no = ?
+  `).bind(payjsOrderId, qrcode, payUrl, payjsOrderId, orderNo).run();
+  const order = await db.prepare("SELECT * FROM po_orders WHERE order_no = ?").bind(orderNo).first();
+  return jsonResponse({ success: true, reused: false, order: publicOrder(order), payment: publicPayment(order), user: publicUser(user) });
+}
+
+async function handlePayCallback(request, env) {
+  const db = await poDb(env);
+  const params = await readPayjsCallback(request);
+  if (!verifyPayjsSign(params, env.PAYJS_KEY || "")) {
+    return new Response("sign error", { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  }
+  if (String(params.return_code || "") !== "1") {
+    return new Response("success", { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  }
+
+  const orderNo = String(params.out_trade_no || "");
+  const totalFee = Number(params.total_fee || 0);
+  const payjsOrderId = String(params.payjs_order_id || params.transaction_id || "");
+  const order = await db.prepare("SELECT * FROM po_orders WHERE order_no = ?").bind(orderNo).first();
+  if (!order) return new Response("order not found", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  if (Number(order.amount_cents || 0) !== totalFee) {
+    await db.prepare("UPDATE po_orders SET status = 'failed', processed_at = ? WHERE order_no = ?").bind(nowIso(), orderNo).run();
+    return new Response("amount error", { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  }
+  if (Number(order.paid || 0) === 1 || ["paid", "approved"].includes(order.status)) {
+    return new Response("success", { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  }
+
+  const paidAt = nowIso();
+  const claimed = await db.prepare(`
+    UPDATE po_orders
+    SET status = 'processing', transaction_id = COALESCE(NULLIF(?, ''), transaction_id),
+        payjs_order_id = COALESCE(NULLIF(?, ''), payjs_order_id)
+    WHERE order_no = ? AND paid = 0 AND status NOT IN ('paid', 'approved', 'processing')
+  `).bind(payjsOrderId, payjsOrderId, orderNo).run();
+  if (Number(claimed?.meta?.changes || 0) > 0) {
+    await db.batch([
+      ...orderBenefitStatements(db, order, "payjs_paid"),
+      db.prepare("UPDATE po_orders SET status = 'paid', paid = 1, paid_at = ?, processed_at = ? WHERE order_no = ?")
+        .bind(paidAt, paidAt, orderNo)
+    ]);
+    await db.prepare("INSERT INTO po_user_events (user_id, event, ip, user_agent) VALUES (?, 'payjs_paid', ?, ?)")
+      .bind(order.user_id, request.headers.get("CF-Connecting-IP") || "", request.headers.get("User-Agent") || "").run();
+  } else {
+    const current = await db.prepare("SELECT status, paid FROM po_orders WHERE order_no = ?").bind(orderNo).first();
+    if (!(Number(current?.paid || 0) === 1 || ["paid", "approved"].includes(current?.status))) {
+      return new Response("processing", { status: 409, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+    }
+  }
+  return new Response("success", { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+}
+
 async function handleOrderStatus(request, env) {
   const db = await poDb(env);
   const user = await requireUser(request, db);
@@ -262,7 +376,7 @@ async function handleOrderStatus(request, env) {
   const order = await db.prepare("SELECT * FROM po_orders WHERE order_no = ? AND user_id = ?").bind(orderNo, user.id).first();
   if (!order) return jsonResponse({ success: false, error: "订单不存在" }, 404);
   const refreshed = await refreshSubscription(db, user.id);
-  return jsonResponse({ success: true, order: publicOrder(order), user: publicUser(refreshed) });
+  return jsonResponse({ success: true, order: publicOrder(order), payment: publicPayment(order), user: publicUser(refreshed) });
 }
 
 async function handleAdminReview(request, env, action) {
@@ -342,20 +456,25 @@ async function handleAdminEvents(request, env) {
 }
 
 async function applyOrderBenefit(db, order, reason) {
+  const statements = orderBenefitStatements(db, order, reason);
+  if (statements.length) await db.batch(statements);
+}
+
+function orderBenefitStatements(db, order, reason) {
   if (["single", "pack"].includes(order.product_type)) {
-    await db.batch([
+    return [
       db.prepare("UPDATE po_users SET credits = credits + ? WHERE id = ?").bind(order.credits, order.user_id),
       db.prepare("INSERT INTO po_credit_logs (user_id, source, change, reason, order_no) VALUES (?, 'credits', ?, ?, ?)").bind(order.user_id, order.credits, reason, order.order_no)
-    ]);
-    return;
+    ];
   }
   if (order.product_type === "monthly") {
     const expireAt = secondsFromNow(30 * 24 * 60 * 60);
-    await db.batch([
+    return [
       db.prepare("UPDATE po_users SET subscription_type = 'monthly', subscription_expire_at = ?, subscription_quota = 50 WHERE id = ?").bind(expireAt, order.user_id),
       db.prepare("INSERT INTO po_credit_logs (user_id, source, change, reason, order_no) VALUES (?, 'subscription_quota', 50, ?, ?)").bind(order.user_id, reason, order.order_no)
-    ]);
+    ];
   }
+  return [];
 }
 
 async function requireUser(request, db) {
@@ -418,7 +537,11 @@ async function ensurePoSchema(db) {
       credits INTEGER NOT NULL DEFAULT 0,
       subscription_quota INTEGER NOT NULL DEFAULT 0,
       status TEXT NOT NULL DEFAULT 'pending',
+      paid INTEGER NOT NULL DEFAULT 0,
       transaction_id TEXT,
+      payjs_order_id TEXT,
+      payment_qrcode TEXT,
+      pay_url TEXT,
       paid_at TEXT,
       submitted_at TEXT,
       reviewed_at TEXT,
@@ -455,7 +578,11 @@ async function ensurePoColumns(db) {
     ["po_users", "email_verified_at", "TEXT"],
     ["po_users", "email_verify_token", "TEXT"],
     ["po_users", "email_verify_expires_at", "TEXT"],
-    ["po_users", "email_bonus_claimed", "INTEGER NOT NULL DEFAULT 0"]
+    ["po_users", "email_bonus_claimed", "INTEGER NOT NULL DEFAULT 0"],
+    ["po_orders", "paid", "INTEGER NOT NULL DEFAULT 0"],
+    ["po_orders", "payjs_order_id", "TEXT"],
+    ["po_orders", "payment_qrcode", "TEXT"],
+    ["po_orders", "pay_url", "TEXT"]
   ];
   for (const [table, column, type] of columns) {
     try {
@@ -515,6 +642,10 @@ function publicOrder(order) {
     credits: Number(order.credits || 0),
     subscription_quota: Number(order.subscription_quota || 0),
     status: order.status,
+    paid: Boolean(Number(order.paid || 0)) || ["paid", "approved"].includes(order.status),
+    payjs_order_id: order.payjs_order_id || "",
+    payment_qrcode: order.payment_qrcode || "",
+    pay_url: order.pay_url || "",
     paid_at: order.paid_at,
     submitted_at: order.submitted_at,
     reviewed_at: order.reviewed_at,
@@ -524,6 +655,17 @@ function publicOrder(order) {
 
 function publicAdminOrder(order) {
   return { ...publicOrder(order), account: order.account, user_uid: order.user_uid };
+}
+
+function publicPayment(order) {
+  return {
+    order_no: order.order_no,
+    qrcode: order.payment_qrcode || "",
+    pay_url: order.pay_url || order.payment_qrcode || "",
+    payjs_order_id: order.payjs_order_id || "",
+    amount_cents: Number(order.amount_cents || 0),
+    amount_yuan: Number(order.amount_cents || 0) / 100
+  };
 }
 
 function validAdmin(request, env) {
@@ -841,6 +983,29 @@ async function readJson(request) {
   return request.json();
 }
 
+async function readPayjsCallback(request) {
+  const type = request.headers.get("content-type") || "";
+  if (type.includes("application/json")) return await request.json();
+  const text = await request.text();
+  const params = {};
+  for (const [key, value] of new URLSearchParams(text)) params[key] = value;
+  return params;
+}
+
+function payjsSign(params, key) {
+  const source = Object.keys(params)
+    .filter(name => name !== "sign" && params[name] !== undefined && params[name] !== null && String(params[name]) !== "")
+    .sort()
+    .map(name => `${name}=${params[name]}`)
+    .join("&");
+  return md5(`${source}&key=${key}`).toUpperCase();
+}
+
+function verifyPayjsSign(params, key) {
+  if (!key || !params?.sign) return false;
+  return timingSafeEqual(payjsSign(params, key), String(params.sign || "").toUpperCase());
+}
+
 async function hashPassword(password) {
   const salt = randomHex(16);
   const iterations = PBKDF2_ITERATIONS;
@@ -893,6 +1058,70 @@ function hexToBytes(hex) {
 
 function bytesToHex(bytes) {
   return [...bytes].map(byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function md5(input) {
+  function add32(a, b) { return (a + b) & 0xFFFFFFFF; }
+  function cmn(q, a, b, x, s, t) {
+    a = add32(add32(a, q), add32(x, t));
+    return add32((a << s) | (a >>> (32 - s)), b);
+  }
+  function ff(a, b, c, d, x, s, t) { return cmn((b & c) | (~b & d), a, b, x, s, t); }
+  function gg(a, b, c, d, x, s, t) { return cmn((b & d) | (c & ~d), a, b, x, s, t); }
+  function hh(a, b, c, d, x, s, t) { return cmn(b ^ c ^ d, a, b, x, s, t); }
+  function ii(a, b, c, d, x, s, t) { return cmn(c ^ (b | ~d), a, b, x, s, t); }
+  function md5cycle(state, block) {
+    let [a, b, c, d] = state;
+    a = ff(a, b, c, d, block[0], 7, -680876936); d = ff(d, a, b, c, block[1], 12, -389564586);
+    c = ff(c, d, a, b, block[2], 17, 606105819); b = ff(b, c, d, a, block[3], 22, -1044525330);
+    a = ff(a, b, c, d, block[4], 7, -176418897); d = ff(d, a, b, c, block[5], 12, 1200080426);
+    c = ff(c, d, a, b, block[6], 17, -1473231341); b = ff(b, c, d, a, block[7], 22, -45705983);
+    a = ff(a, b, c, d, block[8], 7, 1770035416); d = ff(d, a, b, c, block[9], 12, -1958414417);
+    c = ff(c, d, a, b, block[10], 17, -42063); b = ff(b, c, d, a, block[11], 22, -1990404162);
+    a = ff(a, b, c, d, block[12], 7, 1804603682); d = ff(d, a, b, c, block[13], 12, -40341101);
+    c = ff(c, d, a, b, block[14], 17, -1502002290); b = ff(b, c, d, a, block[15], 22, 1236535329);
+    a = gg(a, b, c, d, block[1], 5, -165796510); d = gg(d, a, b, c, block[6], 9, -1069501632);
+    c = gg(c, d, a, b, block[11], 14, 643717713); b = gg(b, c, d, a, block[0], 20, -373897302);
+    a = gg(a, b, c, d, block[5], 5, -701558691); d = gg(d, a, b, c, block[10], 9, 38016083);
+    c = gg(c, d, a, b, block[15], 14, -660478335); b = gg(b, c, d, a, block[4], 20, -405537848);
+    a = gg(a, b, c, d, block[9], 5, 568446438); d = gg(d, a, b, c, block[14], 9, -1019803690);
+    c = gg(c, d, a, b, block[3], 14, -187363961); b = gg(b, c, d, a, block[8], 20, 1163531501);
+    a = gg(a, b, c, d, block[13], 5, -1444681467); d = gg(d, a, b, c, block[2], 9, -51403784);
+    c = gg(c, d, a, b, block[7], 14, 1735328473); b = gg(b, c, d, a, block[12], 20, -1926607734);
+    a = hh(a, b, c, d, block[5], 4, -378558); d = hh(d, a, b, c, block[8], 11, -2022574463);
+    c = hh(c, d, a, b, block[11], 16, 1839030562); b = hh(b, c, d, a, block[14], 23, -35309556);
+    a = hh(a, b, c, d, block[1], 4, -1530992060); d = hh(d, a, b, c, block[4], 11, 1272893353);
+    c = hh(c, d, a, b, block[7], 16, -155497632); b = hh(b, c, d, a, block[10], 23, -1094730640);
+    a = hh(a, b, c, d, block[13], 4, 681279174); d = hh(d, a, b, c, block[0], 11, -358537222);
+    c = hh(c, d, a, b, block[3], 16, -722521979); b = hh(b, c, d, a, block[6], 23, 76029189);
+    a = hh(a, b, c, d, block[9], 4, -640364487); d = hh(d, a, b, c, block[12], 11, -421815835);
+    c = hh(c, d, a, b, block[15], 16, 530742520); b = hh(b, c, d, a, block[2], 23, -995338651);
+    a = ii(a, b, c, d, block[0], 6, -198630844); d = ii(d, a, b, c, block[7], 10, 1126891415);
+    c = ii(c, d, a, b, block[14], 15, -1416354905); b = ii(b, c, d, a, block[5], 21, -57434055);
+    a = ii(a, b, c, d, block[12], 6, 1700485571); d = ii(d, a, b, c, block[3], 10, -1894986606);
+    c = ii(c, d, a, b, block[10], 15, -1051523); b = ii(b, c, d, a, block[1], 21, -2054922799);
+    a = ii(a, b, c, d, block[8], 6, 1873313359); d = ii(d, a, b, c, block[15], 10, -30611744);
+    c = ii(c, d, a, b, block[6], 15, -1560198380); b = ii(b, c, d, a, block[13], 21, 1309151649);
+    a = ii(a, b, c, d, block[4], 6, -145523070); d = ii(d, a, b, c, block[11], 10, -1120210379);
+    c = ii(c, d, a, b, block[2], 15, 718787259); b = ii(b, c, d, a, block[9], 21, -343485551);
+    state[0] = add32(a, state[0]); state[1] = add32(b, state[1]); state[2] = add32(c, state[2]); state[3] = add32(d, state[3]);
+  }
+  const bytes = Array.from(new TextEncoder().encode(String(input)));
+  const bitLen = bytes.length * 8;
+  bytes.push(0x80);
+  while (bytes.length % 64 !== 56) bytes.push(0);
+  for (let i = 0; i < 8; i += 1) bytes.push(i < 4 ? (bitLen >>> (8 * i)) & 0xff : 0);
+  const state = [1732584193, -271733879, -1732584194, 271733878];
+  for (let i = 0; i < bytes.length; i += 64) {
+    const block = [];
+    for (let j = 0; j < 64; j += 4) block.push(bytes[i + j] | (bytes[i + j + 1] << 8) | (bytes[i + j + 2] << 16) | (bytes[i + j + 3] << 24));
+    md5cycle(state, block);
+  }
+  return state.map(n => {
+    let out = "";
+    for (let i = 0; i < 4; i += 1) out += ((n >>> (8 * i)) & 0xff).toString(16).padStart(2, "0");
+    return out;
+  }).join("");
 }
 
 function timingSafeEqual(a, b) {
