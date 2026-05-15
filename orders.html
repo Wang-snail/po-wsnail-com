@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>提交付款信息｜亚马逊新品机会判断器</title>
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --border: #d9e2ec;
+      --ink: #0f172a;
+      --text: #243447;
+      --muted: #62748a;
+      --primary: #1f6feb;
+      --primary-dark: #174ea6;
+      --good: #16803c;
+      --warn: #b7791f;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, "Microsoft YaHei", sans-serif;
+      line-height: 1.55;
+    }
+
+    a { color: var(--primary); text-decoration: none; font-weight: 800; }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .brand {
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    nav a {
+      min-height: 34px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      background: #e6edf7;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    h1, h2 {
+      margin: 0;
+      color: var(--ink);
+      letter-spacing: 0;
+      line-height: 1.25;
+    }
+
+    h1 { font-size: 32px; }
+    h2 { font-size: 18px; margin-bottom: 12px; }
+    p { margin: 8px 0 0; color: var(--muted); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 330px;
+      gap: 18px;
+      align-items: start;
+      margin-top: 18px;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    input, select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      font-size: 14px;
+    }
+
+    .full { grid-column: 1 / -1; }
+
+    .button {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      min-height: 42px;
+      border: 0;
+      border-radius: 6px;
+      padding: 9px 14px;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 900;
+      font-size: 14px;
+    }
+
+    .button:hover { background: var(--primary-dark); }
+
+    .line {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 0;
+    }
+
+    .line:last-child { border-bottom: 0; }
+    .line span:first-child { color: var(--muted); }
+    .line strong { color: var(--ink); }
+
+    .note {
+      margin-top: 14px;
+      border-left: 5px solid var(--warn);
+      border-radius: 8px;
+      background: #fff8e6;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .success {
+      border-left-color: var(--good);
+      background: #edfdf3;
+    }
+
+    .qr-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .qr-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfdff;
+      padding: 12px;
+      text-align: center;
+      max-width: 360px;
+      margin: 0 auto;
+    }
+
+    .qr-card img {
+      width: 100%;
+      max-width: 190px;
+      aspect-ratio: 1 / 1;
+      object-fit: contain;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .qr-placeholder {
+      display: none;
+      min-height: 190px;
+      align-items: center;
+      justify-content: center;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      background: #fff;
+      padding: 12px;
+    }
+
+    @media (max-width: 820px) {
+      header, .layout, .grid { grid-template-columns: 1fr; }
+      .full { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <a class="brand" href="/">亚马逊新品机会判断器</a>
+      <nav aria-label="主要导航">
+        <a href="/pricing">价格方案</a>
+        <a href="/checkout">购买信息</a>
+      </nav>
+    </header>
+
+    <main>
+      <h1>扫码付款并提交确认</h1>
+      <p>扫码付款后点击“我已完成支付”。管理员核对金额和时间后，会自动开通点数或月卡。</p>
+
+      <div class="layout">
+        <section class="panel">
+          <h2>付款确认</h2>
+          <form id="paymentForm">
+            <div id="paymentPreview"></div>
+            <div class="qr-grid">
+              <div class="qr-card">
+                <strong id="qrTitle">微信收款码</strong>
+                <div><img id="paymentQr" src="/public/payment/report_5.jpg" alt="微信收款码" onerror="this.style.display='none'; this.parentElement.nextElementSibling.style.display='flex';"></div>
+                <div id="qrPlaceholder" class="qr-placeholder">请放置 public/payment/report_5.jpg</div>
+              </div>
+            </div>
+            <p class="note">不需要上传付款截图。系统会记录服务器提交时间，管理员按收款记录中的时间和金额核对。</p>
+            <div style="margin-top:16px;">
+              <button class="button" type="submit">我已完成支付</button>
+            </div>
+          </form>
+          <div id="result" class="note success" style="display:none;"></div>
+        </section>
+
+        <aside class="panel">
+          <h2>订单摘要</h2>
+          <div id="summary"></div>
+          <p class="note">没有订单草稿时，请先从价格页选择方案。</p>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const TOKEN_KEY = "po_auth_token";
+    const draft = JSON.parse(localStorage.getItem("po_order_draft") || "null");
+    const params = new URLSearchParams(location.search);
+    const summary = document.getElementById("summary");
+    const paymentPreview = document.getElementById("paymentPreview");
+    const result = document.getElementById("result");
+    const paymentQr = document.getElementById("paymentQr");
+    const qrTitle = document.getElementById("qrTitle");
+    const qrPlaceholder = document.getElementById("qrPlaceholder");
+    let currentOrderNo = params.get("order_no") || "";
+    let pollTimer = null;
+
+    function token() {
+      return localStorage.getItem(TOKEN_KEY) || "";
+    }
+
+    async function api(path, options = {}) {
+      const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+      if (token()) headers.Authorization = "Bearer " + token();
+      const response = await fetch(path, { ...options, headers });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.success === false) throw new Error(data.error || "请求失败");
+      return data;
+    }
+
+    const products = {
+      report_1: { productName: "单次报告", amount: 19.9, desc: "到账 1 credits" },
+      report_5: { productName: "5次报告包", amount: 99, desc: "到账 5 credits" },
+      monthly: { productName: "月卡", amount: 100, desc: "30天内 50 次月卡额度" }
+    };
+
+    const paymentQrMap = {
+      report_1: "/public/payment/report_1.jpg",
+      report_5: "/public/payment/report_5.jpg",
+      monthly: "/public/payment/monthly.jpg"
+    };
+
+    function statusText(value) {
+      return {
+        pending_review: "正在确认付款，请稍后",
+        approved: "已开通，次数已到账",
+        paid: "已开通，次数已到账",
+        rejected: "订单未通过确认",
+        failed: "订单异常",
+        pending: "待支付"
+      }[value] || value || "-";
+    }
+
+    function activeDraft() {
+      const productIdFromUrl = params.get("product");
+      if (products[productIdFromUrl]) {
+        const currentDraft = draft && draft.product_id === productIdFromUrl ? draft : {};
+        return { product_id: productIdFromUrl, ...products[productIdFromUrl], ...currentDraft };
+      }
+      if (draft) return draft;
+      const productId = "report_5";
+      return { product_id: productId, ...(products[productId] || products.report_5) };
+    }
+
+    function renderSummary(order = null) {
+      const view = order || activeDraft();
+      const productId = view.product_id || activeDraft().product_id || "report_5";
+      const orderNo = currentOrderNo || view.order_no || "-";
+      const amount = view.amount_yuan || view.amount || Number(view.amount_cents || 0) / 100;
+      const qrSrc = paymentQrMap[productId] || paymentQrMap.report_5;
+      paymentQr.style.display = "";
+      paymentQr.src = qrSrc;
+      qrTitle.textContent = `${view.product_name || view.productName || products[productId]?.productName || "套餐"}微信收款码`;
+      qrPlaceholder.style.display = "none";
+      qrPlaceholder.textContent = `请放置 ${qrSrc.replace(/^\//, "")}`;
+      summary.innerHTML = `
+        <div class="line"><span>订单号</span><strong>${orderNo || "-"}</strong></div>
+        <div class="line"><span>套餐</span><strong>${view.product_name || view.productName || view.product_id || "-"}</strong></div>
+        <div class="line"><span>权益</span><strong>${view.desc || (view.subscription_quota ? view.subscription_quota + " 次月卡额度" : (view.credits ? view.credits + " credits" : "-"))}</strong></div>
+        <div class="line"><span>金额</span><strong>¥${Number(amount || 0).toLocaleString("zh-CN")}</strong></div>
+        <div class="line"><span>状态</span><strong>${statusText(view.status)}</strong></div>
+        <div class="line"><span>提交时间</span><strong>${view.submitted_at ? new Date(view.submitted_at).toLocaleString("zh-CN") : "-"}</strong></div>
+        <div class="line"><span>审核时间</span><strong>${view.reviewed_at ? new Date(view.reviewed_at).toLocaleString("zh-CN") : "-"}</strong></div>
+      `;
+      paymentPreview.innerHTML = `
+        <div class="line"><span>应付金额</span><strong>¥${Number(amount || 0).toLocaleString("zh-CN")}</strong></div>
+        <div class="line"><span>订单号</span><strong>${orderNo || "-"}</strong></div>
+      `;
+    }
+
+    renderSummary();
+
+    document.getElementById("paymentForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      try {
+        const productId = activeDraft().product_id || params.get("product") || "report_5";
+        const data = await api("/api/orders/manual-create", {
+          method: "POST",
+          body: JSON.stringify({ productId })
+        });
+        currentOrderNo = data.order.order_no;
+        localStorage.setItem("po_order_submission", JSON.stringify({ ...activeDraft(), ...data.order, userAccount: data.user.account, userUid: data.user.user_uid }));
+        renderSummary(data.order);
+        result.style.display = "block";
+        result.textContent = data.reused
+          ? "你已有待确认订单，请等待审核。"
+          : "已提交确认，正在审核中。确认后次数会自动到账，请稍后刷新或等待页面自动更新。";
+        startPolling();
+      } catch (error) {
+        result.style.display = "block";
+        result.textContent = error.message;
+      }
+    });
+
+    async function pollStatus() {
+      if (!currentOrderNo) return;
+      try {
+        const data = await api("/api/orders/status?orderNo=" + encodeURIComponent(currentOrderNo), { method: "GET" });
+        renderSummary(data.order);
+        localStorage.setItem("po_user_status", JSON.stringify(data.user));
+        if (["approved", "paid"].includes(data.order.status)) {
+          result.style.display = "block";
+          result.textContent = "已开通成功，次数已到账。";
+          clearInterval(pollTimer);
+        } else if (["rejected", "failed"].includes(data.order.status)) {
+          result.style.display = "block";
+          result.textContent = statusText(data.order.status);
+          clearInterval(pollTimer);
+        }
+      } catch (error) {
+        result.style.display = "block";
+        result.textContent = error.message;
+      }
+    }
+
+    function startPolling() {
+      if (pollTimer) clearInterval(pollTimer);
+      pollStatus();
+      pollTimer = setInterval(pollStatus, 5000);
+    }
+
+    if (currentOrderNo) startPolling();
+  </script>
+</body>
+</html>

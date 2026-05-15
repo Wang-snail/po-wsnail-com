@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>购买信息｜亚马逊新品机会判断器</title>
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --soft: #eef4fb;
+      --border: #d9e2ec;
+      --ink: #0f172a;
+      --text: #243447;
+      --muted: #62748a;
+      --primary: #1f6feb;
+      --primary-dark: #174ea6;
+      --warn: #b7791f;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, "Microsoft YaHei", sans-serif;
+      line-height: 1.55;
+    }
+
+    a { color: var(--primary); text-decoration: none; font-weight: 800; }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .brand {
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    nav a {
+      min-height: 34px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      background: #e6edf7;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      color: var(--ink);
+      letter-spacing: 0;
+      line-height: 1.25;
+    }
+
+    h1 { font-size: 32px; }
+    h2 { font-size: 18px; margin-bottom: 12px; }
+    p { margin: 8px 0 0; color: var(--muted); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 330px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      font-size: 14px;
+    }
+
+    textarea {
+      min-height: 88px;
+      resize: vertical;
+    }
+
+    .full { grid-column: 1 / -1; }
+
+    .summary {
+      display: grid;
+      gap: 10px;
+    }
+
+    .line {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 0;
+    }
+
+    .line:last-child { border-bottom: 0; }
+    .line span:first-child { color: var(--muted); }
+    .line strong { color: var(--ink); }
+
+    .button {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      min-height: 42px;
+      border: 0;
+      border-radius: 6px;
+      padding: 9px 14px;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 900;
+      font-size: 14px;
+    }
+
+    .button:hover { background: var(--primary-dark); }
+
+    .note {
+      margin-top: 14px;
+      border-left: 5px solid var(--warn);
+      border-radius: 8px;
+      background: #fff8e6;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    @media (max-width: 820px) {
+      header, .layout, .grid { grid-template-columns: 1fr; }
+      .full { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <a class="brand" href="/">亚马逊新品机会判断器</a>
+      <nav aria-label="主要导航">
+        <a href="/pricing">价格方案</a>
+        <a href="/">分析工具</a>
+      </nav>
+    </header>
+
+    <main>
+      <h1>邮箱登录并确认套餐</h1>
+      <p>使用邮箱和密码登录或注册，登录后进入扫码付款页。</p>
+
+      <div class="layout" style="margin-top:18px;">
+        <section class="panel">
+          <h2>登录与支付</h2>
+          <form id="checkoutForm">
+            <div class="grid">
+              <div>
+                <label for="product">套餐</label>
+                <select id="product" name="product">
+                  <option value="report_1">单次报告 ¥19.9</option>
+                  <option value="report_5">5次包 ¥99</option>
+                  <option value="monthly">月卡 ¥100/月</option>
+                </select>
+              </div>
+              <div>
+                <label for="account">邮箱</label>
+                <input id="account" name="account" type="email" autocomplete="email" placeholder="请输入邮箱" required>
+              </div>
+              <div>
+                <label for="password">密码</label>
+                <input id="password" name="password" type="password" autocomplete="current-password" placeholder="至少6位密码" required>
+              </div>
+            </div>
+            <div class="button-row" style="margin-top:16px;">
+              <button class="button secondary" id="registerBtn" type="button">注册</button>
+              <button class="button secondary" id="loginBtn" type="button">登录</button>
+            </div>
+            <div id="loginStatus" class="note">未登录时没有免费次数。邮箱注册后赠送 3 次免费报告；邮箱验证只用于额外领取 5 次机会，不影响购买和使用。</div>
+            <div style="margin-top:16px;">
+              <button class="button" type="submit">去扫码付款</button>
+            </div>
+          </form>
+        </section>
+
+        <aside class="panel">
+          <h2>订单摘要</h2>
+          <div id="summary" class="summary"></div>
+          <p class="note">付款页会展示对应套餐的微信收款码。扫码付款后点击“我已完成支付”，等待管理员确认到账。</p>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const TOKEN_KEY = "po_auth_token";
+    const products = {
+      report_1: { name: "单次报告", amount: 19.9, credits: 1, desc: "到账 1 credits" },
+      report_5: { name: "5次包", amount: 99, credits: 5, desc: "到账 5 credits" },
+      monthly: { name: "月卡", amount: 100, credits: 50, desc: "30天内 50 次月卡额度" }
+    };
+
+    const params = new URLSearchParams(location.search);
+    const productInput = document.getElementById("product");
+    const summary = document.getElementById("summary");
+    const form = document.getElementById("checkoutForm");
+    const loginStatus = document.getElementById("loginStatus");
+
+    if (products[params.get("product")]) productInput.value = params.get("product");
+
+    function token() {
+      return localStorage.getItem(TOKEN_KEY) || "";
+    }
+
+    async function api(path, options = {}) {
+      const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+      if (token()) headers.Authorization = "Bearer " + token();
+      const response = await fetch(path, { ...options, headers });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.success === false) throw new Error(data.error || "请求失败");
+      return data;
+    }
+
+    function currentOrder() {
+      const product = products[productInput.value];
+      return {
+        product_id: productInput.value,
+        productName: product.name,
+        amount: product.amount,
+        desc: product.desc,
+        currency: "CNY",
+        paymentMethod: "wechat"
+      };
+    }
+
+    function renderSummary() {
+      const order = currentOrder();
+      summary.innerHTML = `
+        <div class="line"><span>套餐</span><strong>${order.productName}</strong></div>
+        <div class="line"><span>权益</span><strong>${order.desc}</strong></div>
+        <div class="line"><span>应付金额</span><strong>¥${order.amount.toLocaleString("zh-CN")}</strong></div>
+      `;
+    }
+
+    productInput.addEventListener("change", renderSummary);
+    renderSummary();
+
+    async function submitAuth(path) {
+      const email = document.getElementById("account").value.trim();
+      const password = document.getElementById("password").value;
+      const data = await api(path, {
+        method: "POST",
+        body: JSON.stringify({ email, password })
+      });
+      localStorage.setItem(TOKEN_KEY, data.token);
+      loginStatus.textContent = `登录成功：${data.user.email || data.user.account}（${data.user.user_uid}），免费次数 ${data.user.free_credits}，邮箱${data.user.email_verified ? "已验证" : "未验证（不影响购买和使用）"}`;
+      return data;
+    }
+
+    document.getElementById("registerBtn").addEventListener("click", async () => {
+      try {
+        await submitAuth("/api/auth/register");
+      } catch (error) {
+        loginStatus.textContent = error.message;
+      }
+    });
+
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      try {
+        await submitAuth("/api/auth/login");
+      } catch (error) {
+        loginStatus.textContent = error.message;
+      }
+    });
+
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const order = currentOrder();
+      if (!token()) {
+        loginStatus.textContent = "请先完成邮箱密码登录。";
+        return;
+      }
+      try {
+        await api("/api/user/me", { method: "GET" });
+        localStorage.setItem("po_order_draft", JSON.stringify(order));
+        location.href = "/orders?product=" + encodeURIComponent(order.product_id);
+      } catch (error) {
+        loginStatus.textContent = error.message;
+      }
+    });
+  </script>
+</body>
+</html>

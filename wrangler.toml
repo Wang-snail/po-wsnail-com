@@ -1,6 +1,6 @@
-name = "po-chat-api"
-main = "api/worker.js"
-compatibility_date = "2026-04-23"
+name = "po-wsnail-com"
+pages_build_output_dir = "."
+compatibility_date = "2026-04-26"
 
 [[d1_databases]]
 binding = "po_chat_logs"

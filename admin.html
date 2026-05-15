@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台｜亚马逊新品机会判断器</title>
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --border: #d9e2ec;
+      --ink: #0f172a;
+      --text: #243447;
+      --muted: #62748a;
+      --primary: #1f6feb;
+      --primary-dark: #174ea6;
+      --surface-soft: #f0f4f8;
+      --good: #16803c;
+      --bad: #c2410c;
+      --warn: #b7791f;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, "Microsoft YaHei", sans-serif;
+      line-height: 1.55;
+    }
+
+    a { color: var(--primary); text-decoration: none; font-weight: 800; }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .brand {
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    nav a {
+      min-height: 34px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      background: #e6edf7;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    h1, h2 {
+      margin: 0;
+      color: var(--ink);
+      letter-spacing: 0;
+      line-height: 1.25;
+    }
+
+    h1 { font-size: 32px; }
+    h2 { font-size: 18px; margin-bottom: 12px; }
+    p { margin: 8px 0 0; color: var(--muted); }
+
+    .panel {
+      margin-top: 18px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .kpi {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 16px;
+    }
+
+    .kpi small {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .kpi strong {
+      display: block;
+      margin-top: 8px;
+      color: var(--ink);
+      font-size: 28px;
+      line-height: 1.1;
+    }
+
+    .auth-box {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) auto auto;
+      gap: 10px;
+      align-items: end;
+      margin-top: 16px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    input {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 10px;
+      font: inherit;
+      font-size: 14px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    button {
+      min-height: 40px;
+      border: 0;
+      border-radius: 6px;
+      padding: 9px 14px;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 900;
+      font-size: 14px;
+    }
+
+    button:hover { background: var(--primary-dark); }
+
+    button.secondary {
+      background: #e6edf7;
+      color: var(--ink);
+    }
+
+    button.danger {
+      background: var(--bad);
+    }
+
+    table {
+      width: 100%;
+      margin-top: 14px;
+      border-collapse: collapse;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #edf2f7;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #fff8e6;
+      color: #8a5a13;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .status.done {
+      background: #edfdf3;
+      color: var(--good);
+    }
+
+    .status.bad {
+      background: #fff1eb;
+      color: var(--bad);
+    }
+
+    .status.neutral {
+      background: var(--surface-soft);
+      color: var(--muted);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab {
+      background: transparent;
+      color: var(--muted);
+      border-radius: 6px 6px 0 0;
+      min-height: 38px;
+    }
+
+    .tab.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .empty {
+      margin-top: 18px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      background: #fbfdff;
+      padding: 34px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 760px) {
+      header { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .auth-box { grid-template-columns: 1fr; }
+      .panel { overflow-x: auto; }
+      table { min-width: 840px; }
+    }
+
+    @media (max-width: 560px) {
+      .page { padding: 16px; }
+      .grid { grid-template-columns: 1fr; }
+      h1 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <a class="brand" href="/">亚马逊新品机会判断器</a>
+      <nav aria-label="主要导航">
+        <a href="/pricing">价格方案</a>
+        <a href="/orders">付款页</a>
+        <a href="/">分析工具</a>
+      </nav>
+    </header>
+
+    <main>
+      <h1>PO 管理后台</h1>
+      <p>查看 po.wsnail.com 注册用户、订单和关键行为事件。用户注册后会在“用户”表中出现。</p>
+
+      <section class="panel">
+        <h2>管理员访问</h2>
+        <p>输入管理员令牌后读取后台数据。令牌只保存在当前浏览器，不会写进前端代码。</p>
+        <div class="auth-box">
+          <div>
+            <label for="adminToken">ADMIN_APPROVE_TOKEN</label>
+            <input id="adminToken" type="password" autocomplete="off" placeholder="输入管理员令牌">
+          </div>
+          <button id="loadBtn" type="button">读取数据</button>
+          <button id="clearTokenBtn" class="secondary" type="button">清除令牌</button>
+        </div>
+        <p id="statusText" class="muted"></p>
+      </section>
+
+      <section id="summary" class="grid hidden"></section>
+
+      <div class="tabs hidden" id="tabs">
+        <button class="tab active" data-tab="users" type="button">用户</button>
+        <button class="tab" data-tab="orders" type="button">订单</button>
+        <button class="tab" data-tab="events" type="button">事件</button>
+      </div>
+
+      <section id="content"></section>
+    </main>
+  </div>
+
+  <script>
+    const content = document.getElementById("content");
+    const summary = document.getElementById("summary");
+    const statusText = document.getElementById("statusText");
+    const tabs = document.getElementById("tabs");
+    const tokenInput = document.getElementById("adminToken");
+    const state = {
+      activeTab: "users",
+      users: [],
+      orders: [],
+      events: [],
+      summary: null
+    };
+
+    tokenInput.value = sessionStorage.getItem("po_admin_token") || "";
+
+    function adminToken() {
+      return tokenInput.value.trim();
+    }
+
+    async function adminFetch(path) {
+      const token = adminToken();
+      if (!token) throw new Error("请输入管理员令牌。");
+      const url = `${path}${path.includes("?") ? "&" : "?"}adminToken=${encodeURIComponent(token)}`;
+      const res = await fetch(url);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) throw new Error(data.error || `接口返回异常：HTTP ${res.status}`);
+      return data.data;
+    }
+
+    function fmtTime(value) {
+      if (!value) return "-";
+      return new Date(value).toLocaleString("zh-CN");
+    }
+
+    function moneyFromCents(value) {
+      return "¥" + (Number(value || 0) / 100).toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function statusBadge(value) {
+      const text = value || "-";
+      const cls = ["approved", "paid", "已验证"].includes(text) ? "status done" : ["rejected", "failed"].includes(text) ? "status bad" : text === "-" ? "status neutral" : "status";
+      return `<span class="${cls}">${escapeHtml(text)}</span>`;
+    }
+
+    function renderSummary() {
+      const data = state.summary;
+      if (!data) {
+        summary.classList.add("hidden");
+        return;
+      }
+      summary.classList.remove("hidden");
+      summary.innerHTML = `
+        <div class="kpi"><small>注册用户</small><strong>${Number(data.users || 0)}</strong></div>
+        <div class="kpi"><small>待确认订单</small><strong>${Number(data.pendingOrders || 0)}</strong></div>
+        <div class="kpi"><small>已开通订单</small><strong>${Number(data.approvedOrders || 0)}</strong></div>
+        <div class="kpi"><small>确认收入</small><strong>${moneyFromCents(data.revenueCents)}</strong></div>
+      `;
+    }
+
+    function renderUsers() {
+      if (!state.users.length) {
+        content.innerHTML = `<div class="empty">暂无用户。新用户在前台邮箱注册后会出现在这里。</div>`;
+        return;
+      }
+      content.innerHTML = `
+        <section class="panel">
+          <h2>注册用户</h2>
+          <p>这里就是你要沉淀的用户账号信息，包括邮箱、用户 ID、免费次数、点数、月卡和最近登录时间。</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>用户ID</th>
+                  <th>邮箱/账号</th>
+                  <th>邮箱状态</th>
+                  <th>免费次数</th>
+                  <th>付费次数</th>
+                  <th>月卡剩余</th>
+                  <th>月卡到期</th>
+                  <th>最近登录</th>
+                  <th>注册时间</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${state.users.map(user => `
+                  <tr>
+                    <td>${escapeHtml(user.user_uid || user.id)}</td>
+                    <td>${escapeHtml(user.email || user.account || "-")}</td>
+                    <td>${statusBadge(user.email_verified_at ? "已验证" : "未验证")}</td>
+                    <td>${Number(user.free_credits || 0)}</td>
+                    <td>${Number(user.credits || 0)}</td>
+                    <td>${Number(user.subscription_quota || 0)}</td>
+                    <td>${fmtTime(user.subscription_expire_at)}</td>
+                    <td>${fmtTime(user.last_login_at)}</td>
+                    <td>${fmtTime(user.created_at)}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderOrders() {
+      if (!state.orders.length) {
+        content.innerHTML = `<div class="empty">暂无订单。</div>`;
+        return;
+      }
+      content.innerHTML = `
+        <section class="panel">
+          <h2>订单</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>订单号</th>
+                  <th>用户</th>
+                  <th>套餐</th>
+                  <th>金额</th>
+                  <th>状态</th>
+                  <th>提交时间</th>
+                  <th>审核时间</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${state.orders.map(order => `
+                  <tr>
+                    <td>${escapeHtml(order.order_no || "-")}</td>
+                    <td>${escapeHtml(order.account || "-")}<br><span class="muted">${escapeHtml(order.user_uid || "")}</span></td>
+                    <td>${escapeHtml(order.product_name || order.product_id || "-")}</td>
+                    <td>${moneyFromCents(order.amount_cents)}</td>
+                    <td>${statusBadge(order.status)}</td>
+                    <td>${fmtTime(order.submitted_at || order.created_at)}</td>
+                    <td>${fmtTime(order.reviewed_at)}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderEvents() {
+      if (!state.events.length) {
+        content.innerHTML = `<div class="empty">暂无事件。</div>`;
+        return;
+      }
+      content.innerHTML = `
+        <section class="panel">
+          <h2>用户事件</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>时间</th>
+                  <th>用户</th>
+                  <th>事件</th>
+                  <th>IP</th>
+                  <th>User Agent</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${state.events.map(event => `
+                  <tr>
+                    <td>${fmtTime(event.created_at)}</td>
+                    <td>${escapeHtml(event.account || "-")}<br><span class="muted">${escapeHtml(event.user_uid || "")}</span></td>
+                    <td>${escapeHtml(event.event || "-")}</td>
+                    <td>${escapeHtml(event.ip || "-")}</td>
+                    <td class="muted">${escapeHtml(event.user_agent || "-")}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderActiveTab() {
+      document.querySelectorAll(".tab").forEach(button => {
+        button.classList.toggle("active", button.dataset.tab === state.activeTab);
+      });
+      if (state.activeTab === "orders") return renderOrders();
+      if (state.activeTab === "events") return renderEvents();
+      return renderUsers();
+    }
+
+    async function loadAdminData() {
+      statusText.textContent = "读取中...";
+      content.innerHTML = "";
+      try {
+        sessionStorage.setItem("po_admin_token", adminToken());
+        const [summaryData, users, orders, events] = await Promise.all([
+          adminFetch("/api/admin/po/summary"),
+          adminFetch("/api/admin/po/users"),
+          adminFetch("/api/admin/po/orders"),
+          adminFetch("/api/admin/po/events")
+        ]);
+        state.summary = summaryData;
+        state.users = users || [];
+        state.orders = orders || [];
+        state.events = events || [];
+        tabs.classList.remove("hidden");
+        renderSummary();
+        renderActiveTab();
+        statusText.textContent = `已读取：${state.users.length} 个用户，${state.orders.length} 个订单，${state.events.length} 条事件。`;
+      } catch (error) {
+        summary.classList.add("hidden");
+        tabs.classList.add("hidden");
+        content.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
+        statusText.textContent = "读取失败。";
+      }
+    }
+
+    document.getElementById("loadBtn").addEventListener("click", loadAdminData);
+    document.getElementById("clearTokenBtn").addEventListener("click", () => {
+      sessionStorage.removeItem("po_admin_token");
+      tokenInput.value = "";
+      statusText.textContent = "已清除当前浏览器中的管理员令牌。";
+    });
+    document.querySelectorAll(".tab").forEach(button => {
+      button.addEventListener("click", () => {
+        state.activeTab = button.dataset.tab;
+        renderActiveTab();
+      });
+    });
+
+    if (tokenInput.value) loadAdminData();
+  </script>
+</body>
+</html>

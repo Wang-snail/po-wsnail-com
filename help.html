@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>使用教程｜亚马逊新品机会判断器怎么用</title>
+  <meta name="description" content="亚马逊新品机会判断器使用教程：了解需要上传哪些卖家精灵或插件表格，如何批量上传 BS 榜单、产品列表、五点描述和评论数据，如何读取市场容量、竞争强度、ROI、可行指数和数据可信指数。">
+  <meta name="keywords" content="亚马逊选品工具使用教程,亚马逊新品机会判断器,卖家精灵表格分析,亚马逊ROI计算器,ASIN归并,产品可行性分析">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://po.wsnail.com/help">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="亚马逊新品机会判断器使用教程">
+  <meta property="og:description" content="从上传表格到查看 ROI、市场容量、竞争强度和可行指数，一页看懂亚马逊新品机会判断器怎么用。">
+  <meta property="og:url" content="https://po.wsnail.com/help">
+  <meta property="og:locale" content="zh_CN">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "亚马逊新品机会判断器",
+              "item": "https://po.wsnail.com/"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "使用教程",
+              "item": "https://po.wsnail.com/help"
+            }
+          ]
+        },
+        {
+          "@type": "HowTo",
+          "name": "如何使用亚马逊新品机会判断器生成新品可行性报告",
+          "description": "上传 BS 榜单、关键词产品列表、五点描述、评论数据和成本信息后，系统按 ASIN 归并并生成市场、竞争、价格、ROI 和风险报告。",
+          "totalTime": "PT5M",
+          "step": [
+            {
+              "@type": "HowToStep",
+              "name": "准备表格",
+              "text": "从卖家精灵或常用插件导出 BS 榜单、产品列表、五点描述、评论数据，以及成本、售价、尺寸重量或 FBA 费用表。"
+            },
+            {
+              "@type": "HowToStep",
+              "name": "批量上传",
+              "text": "在首页上传区域一次选择多个表格，或把文件拖入上传框。工具会自动识别表格字段并按 ASIN 合并数据。"
+            },
+            {
+              "@type": "HowToStep",
+              "name": "填写核心参数",
+              "text": "补充核心关键词、目标售价、采购成本、头程、FBA、广告、退货率等 ROI 参数。"
+            },
+            {
+              "@type": "HowToStep",
+              "name": "生成报告",
+              "text": "点击生成分析报告，查看最终判断、市场容量、竞争强度、价格带、ROI、项目可行指数和数据可信指数。"
+            },
+            {
+              "@type": "HowToStep",
+              "name": "决定下一步",
+              "text": "根据报告建议选择进入、小批量测款、暂缓补充验证或不建议进入。"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "这个工具需要上传哪些文件？",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "建议至少上传 BS 榜单产品列表、关键词搜索产品列表和成本/尺寸/费用表。为了让需求和痛点判断更完整，也建议上传五点描述列表和评论数据。"
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "支持哪些表格格式？",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "支持 xlsx、xlsm、csv、tsv、txt 和 html 表格。较老的 xls 文件如果读取异常，建议先用 Excel 或 WPS 另存为 xlsx。"
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "当前分析有 AI 参与吗？",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "当前 MVP 版本主要使用前端规则、字段识别、ASIN 归并、标签化和 ROI 公式计算，还没有接入 AI 模型。后续可以把评论痛点、卖点归纳和报告文案升级为 AI 辅助。"
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "项目可行指数和数据可信指数有什么区别？",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "项目可行指数衡量产品值不值得做，综合市场容量、竞争友好度、利润空间、差异化机会和风险可控。数据可信指数衡量当前结论靠不靠谱，会受缺失字段、数据来源单一、异常值和成本数据未验证等因素影响。"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --soft: #eef4fb;
+      --border: #d9e2ec;
+      --ink: #0f172a;
+      --text: #243447;
+      --muted: #62748a;
+      --primary: #1f6feb;
+      --primary-dark: #174ea6;
+      --good: #16803c;
+      --warn: #b7791f;
+      --bad: #c2410c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, "Microsoft YaHei", sans-serif;
+      line-height: 1.65;
+    }
+
+    a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    a:hover {
+      color: var(--primary-dark);
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    .site-header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      background: #e6edf7;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .hero {
+      padding: 46px 0 34px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .eyebrow {
+      color: var(--primary-dark);
+      font-size: 13px;
+      font-weight: 800;
+      margin: 0 0 10px;
+    }
+
+    h1, h2, h3 {
+      color: var(--ink);
+      line-height: 1.25;
+      letter-spacing: 0;
+      margin: 0;
+    }
+
+    h1 {
+      max-width: 900px;
+      font-size: 42px;
+    }
+
+    .lead {
+      max-width: 840px;
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .cta-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 22px;
+    }
+
+    .primary-link, .secondary-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 9px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .primary-link {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .primary-link:hover {
+      background: var(--primary-dark);
+      color: #fff;
+    }
+
+    .secondary-link {
+      background: #e6edf7;
+      color: var(--ink);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 28px;
+      padding-top: 28px;
+      align-items: start;
+    }
+
+    .toc {
+      position: sticky;
+      top: 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 16px;
+    }
+
+    .toc strong {
+      display: block;
+      color: var(--ink);
+      margin-bottom: 10px;
+    }
+
+    .toc a {
+      display: block;
+      color: var(--muted);
+      font-size: 14px;
+      padding: 7px 0;
+      font-weight: 700;
+    }
+
+    .content {
+      display: grid;
+      gap: 22px;
+    }
+
+    section {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 22px;
+    }
+
+    h2 {
+      font-size: 24px;
+      margin-bottom: 12px;
+    }
+
+    h3 {
+      font-size: 17px;
+      margin-top: 18px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      margin: 8px 0 0;
+    }
+
+    ul, ol {
+      margin: 10px 0 0;
+      padding-left: 22px;
+    }
+
+    li {
+      margin: 7px 0;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .flow span {
+      min-height: 76px;
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--soft);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin-top: 12px;
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 680px;
+      border-collapse: collapse;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 14px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 11px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #edf2f7;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .signal-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    .signal {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fbfdff;
+    }
+
+    .signal strong {
+      display: block;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+
+    .note {
+      border-left: 5px solid var(--primary);
+      border-radius: 8px;
+      background: #eef6ff;
+      padding: 14px 16px;
+      margin-top: 14px;
+    }
+
+    .note.warn {
+      border-left-color: var(--warn);
+      background: #fff8e6;
+    }
+
+    .faq details {
+      border-top: 1px solid var(--border);
+      padding: 13px 0;
+    }
+
+    .faq details:first-of-type {
+      border-top: 0;
+    }
+
+    summary {
+      cursor: pointer;
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .site-footer {
+      margin-top: 30px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .contact-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 180px;
+      gap: 18px;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfdff;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .contact-card h2 {
+      margin: 0 0 8px;
+      font-size: 20px;
+    }
+
+    .contact-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .contact-card img {
+      width: 180px;
+      max-width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    @media (max-width: 900px) {
+      .site-header, main {
+        grid-template-columns: 1fr;
+      }
+
+      .toc {
+        position: static;
+      }
+
+      .contact-card {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 32px;
+      }
+
+      .flow, .signal-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .page {
+        padding: 18px;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      section {
+        padding: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="site-header">
+      <a class="brand" href="/">亚马逊新品机会判断器</a>
+      <nav class="nav" aria-label="主要导航">
+        <a href="/">开始分析</a>
+        <a href="#faq">常见问题</a>
+      </nav>
+    </header>
+
+    <div class="hero">
+      <p class="eyebrow">使用教程与 SEO 帮助页</p>
+      <h1>亚马逊新品机会判断器怎么用</h1>
+      <p class="lead">这个工具适合在开发新品前快速判断一个产品能不能做。你只需要上传卖家精灵或插件导出的原始表格，系统会按 ASIN 归并数据，生成市场容量、竞争强度、价格带、ROI、风险和可行指数报告。</p>
+      <div class="cta-row">
+        <a class="primary-link" href="/" data-track="help_start_click">打开工具开始分析</a>
+        <a class="secondary-link" href="#files">查看建议上传文件</a>
+      </div>
+    </div>
+
+    <main>
+      <aside class="toc" aria-label="教程目录">
+        <strong>教程目录</strong>
+        <a href="#what">这个工具做什么</a>
+        <a href="#files">建议上传哪些文件</a>
+        <a href="#steps">使用步骤</a>
+        <a href="#report">怎么看报告</a>
+        <a href="#roi">ROI 参数说明</a>
+        <a href="#quality">数据可信度</a>
+        <a href="#faq">常见问题</a>
+      </aside>
+
+      <div class="content">
+        <section id="what">
+          <h2>这个工具做什么</h2>
+          <p>亚马逊新品机会判断器不是普通的表格查看器，它的核心流程是：上传原始表格、按 ASIN 清洗和归并、分析市场与竞争、输出新品可行性报告。</p>
+          <div class="flow" aria-label="产品分析流程">
+            <span>1. 上传表格</span>
+            <span>2. ASIN 归并与标签化</span>
+            <span>3. 市场、竞争、价格、ROI 分析</span>
+            <span>4. 输出判断和下一步建议</span>
+          </div>
+          <p class="note">当前版本的分析主要由前端规则和公式完成，暂未接入 AI 模型。后续可把评论痛点、卖点归纳和报告文案升级为 AI 辅助。</p>
+        </section>
+
+        <section id="files">
+          <h2>建议上传哪些文件</h2>
+          <p>你可以一次框选多个文件上传，也可以把多个表格直接拖入上传区域。上传越完整，报告越可靠。</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>文件类型</th>
+                  <th>用途</th>
+                  <th>建议优先级</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>BS 榜单产品列表</td>
+                  <td>判断头部产品、销量、销售额、价格、评论和品牌集中度。</td>
+                  <td>P0，建议必须上传</td>
+                </tr>
+                <tr>
+                  <td>关键词搜索产品列表</td>
+                  <td>判断核心关键词下的真实竞争环境和产品相关性。</td>
+                  <td>P0，建议必须上传</td>
+                </tr>
+                <tr>
+                  <td>成本、售价、尺寸重量或 FBA 费用表</td>
+                  <td>计算单件净利、净利率、首批投入、ROI 和盈亏平衡销量。</td>
+                  <td>P0/P1，强烈建议上传或手动填写</td>
+                </tr>
+                <tr>
+                  <td>五点描述列表</td>
+                  <td>辅助识别竞品卖点、材质、功能、场景和差异化方向。</td>
+                  <td>P1，建议上传</td>
+                </tr>
+                <tr>
+                  <td>评论数据</td>
+                  <td>辅助分析用户痛点、差评原因、好评原因和产品改良机会。</td>
+                  <td>P1，建议上传</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="note warn">支持 xlsx、xlsm、csv、tsv、txt 和 html 表格。较老的 xls 文件如果读取异常，建议先另存为 xlsx 后再上传。</p>
+        </section>
+
+        <section id="steps">
+          <h2>使用步骤</h2>
+          <ol>
+            <li>准备卖家精灵或插件导出的原始表格，尽量保留 ASIN、标题、品牌、价格、月销量、销售额、评论数、评分、上架时间、月份等字段。</li>
+            <li>打开首页，在上传区域一次选择多个文件，或把文件拖入上传框。</li>
+            <li>填写核心关键词、币种、目标售价和 ROI 相关成本。没有成本表时，也可以先手动输入关键成本。</li>
+            <li>点击“生成分析报告”。系统会先读取文件、识别字段、合并 ASIN、去重并打标签。</li>
+            <li>查看输出结论，根据“最终判断、关键理由、ROI、图表、数据来源、项目可行指数、数据可信指数”决定下一步。</li>
+          </ol>
+        </section>
+
+        <section id="report">
+          <h2>怎么看生成结果</h2>
+          <div class="signal-grid">
+            <div class="signal">
+              <strong>最终判断</strong>
+              <p>直接告诉你建议进入、可以小批量测款、暂缓，还是不建议做。适合先给老板或产品负责人看。</p>
+            </div>
+            <div class="signal">
+              <strong>新品数量和新品占比</strong>
+              <p>重点看近 3 个月新品是否有销量。如果新品有销量，说明市场仍有进入窗口。</p>
+            </div>
+            <div class="signal">
+              <strong>市场容量综合</strong>
+              <p>看销量合计和销售额合计，用来判断这个类目是否足够大，是否值得投入样品和首批货。</p>
+            </div>
+            <div class="signal">
+              <strong>品牌图表</strong>
+              <p>品牌销量扇形图、品牌销售额扇形图和品牌销售额-月份堆积图可以判断头部集中度和品牌垄断风险。</p>
+            </div>
+            <div class="signal">
+              <strong>趋势图</strong>
+              <p>销量趋势折线图和销售额折线图用于观察市场是否增长、稳定或下滑。</p>
+            </div>
+            <div class="signal">
+              <strong>价格图表</strong>
+              <p>价格销量散点图、价格销售额散点图和单价区间 ASIN 统计用于判断主流成交价格带和利润压力。</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="roi">
+          <h2>ROI 参数说明</h2>
+          <p>ROI 计算器会在生成分析后显示。修改任意成本、售价、广告或转化参数后，其他结果会联动更新。</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>参数</th>
+                  <th>含义</th>
+                  <th>影响</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>首次上架时间建议</td>
+                  <td>用于规划首批投放和资金回收节奏，不代表固定批次。</td>
+                  <td>帮助判断什么时候开始测款更合适。</td>
+                </tr>
+                <tr>
+                  <td>目标售价</td>
+                  <td>计划在亚马逊前台销售的价格。</td>
+                  <td>影响销售额、佣金、净利率和 ROI。</td>
+                </tr>
+                <tr>
+                  <td>采购成本、头程、尾程/FBA</td>
+                  <td>单件产品从采购到履约的主要成本。</td>
+                  <td>直接影响单件净利和盈亏平衡销量。</td>
+                </tr>
+                <tr>
+                  <td>广告花费、点击、转化率</td>
+                  <td>测款阶段获客成本和转化效率。</td>
+                  <td>广告占比越高，净利率和 ROI 越容易下滑。</td>
+                </tr>
+                <tr>
+                  <td>退货率和其他成本</td>
+                  <td>售后损耗、固定成本或额外支出。</td>
+                  <td>用于判断项目在保守情况下是否仍有利润。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="note">核心公式：单件净利 = 售价 - 平台佣金 - FBA/尾程费用 - 采购成本 - 头程成本 - 广告成本 - 退货损耗 - 其他成本。ROI = 售完总利润 / 首批总投入。</p>
+        </section>
+
+        <section id="quality">
+          <h2>数据可信度怎么看</h2>
+          <p>工具会同时输出“项目可行指数”和“数据可信指数”。这两个分数要一起看，不能只看可行指数。</p>
+          <ul>
+            <li>项目可行指数高，说明市场、竞争、利润和风险总体更适合进入。</li>
+            <li>数据可信指数高，说明当前判断依据更完整，缺失字段和异常值更少。</li>
+            <li>如果项目可行指数高但数据可信指数低，建议先补充评论、成本、供应商报价或更多产品样本，再决定是否备货。</li>
+          </ul>
+        </section>
+
+        <section id="faq" class="faq">
+          <h2>常见问题</h2>
+          <details>
+            <summary>上传后没有结果怎么办？</summary>
+            <p>先确认表格里是否包含 ASIN、标题、价格、销量、评论数、品牌等关键字段。字段名不完全一致也可以，工具会尝试自动识别。若旧版 xls 读取失败，建议另存为 xlsx。</p>
+          </details>
+          <details>
+            <summary>为什么建议上传评论数据和五点描述？</summary>
+            <p>BS 榜单和产品列表能判断市场和竞争，评论数据和五点描述能帮助判断用户痛点、卖点方向和差异化空间。它们会让报告更接近真实选品决策。</p>
+          </details>
+          <details>
+            <summary>这个工具适合直接决定大货吗？</summary>
+            <p>不建议只凭一份报告直接大货。工具更适合做新品机会初筛和测款决策。对于评分在 60-74 的产品，更适合小批量测款，并继续验证广告成本、转化率、样品质量和供应商稳定性。</p>
+          </details>
+          <details>
+            <summary>数据会上传到服务器吗？</summary>
+            <p>当前页面主要在浏览器本地读取和计算表格，不依赖服务器接口处理文件。你仍应避免上传含有账号密码、隐私信息或不必要敏感数据的文件。</p>
+          </details>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <section class="contact-card" aria-label="联系方式">
+        <div>
+          <h2>有任何问题都可以联系我</h2>
+          <p>如果你在上传表格、查看报告、计算 ROI 或判断选品方向时遇到问题，可以扫码添加微信联系我。我会尽量帮你一起看数据、排查问题，也欢迎反馈你希望工具继续补强的功能。</p>
+        </div>
+        <img src="/public/contact-wechat.jpg" alt="微信联系方式二维码：wsnail">
+      </section>
+      <p>亚马逊新品机会判断器：面向亚马逊卖家的产品可行性分析、市场容量分析、竞争强度分析和 ROI 计算工具。</p>
+    </footer>
+  </div>
+  <script>
+    const analytics = (() => {
+      const key = "po_analytics_session";
+      let sessionId = localStorage.getItem(key);
+      if (!sessionId) {
+        sessionId = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + "-" + Math.random().toString(16).slice(2);
+        localStorage.setItem(key, sessionId);
+      }
+      const cleanUrl = (value) => {
+        if (!value) return "";
+        try {
+          const url = new URL(value, location.origin);
+          return url.origin === location.origin ? url.pathname : url.hostname + url.pathname;
+        } catch (error) {
+          return "";
+        }
+      };
+      const params = new URLSearchParams(location.search);
+      const base = {
+        path: location.pathname,
+        referrer: cleanUrl(document.referrer),
+        source: params.get("utm_source") || "",
+        medium: params.get("utm_medium") || "",
+        campaign: params.get("utm_campaign") || "",
+        sessionId
+      };
+      const track = (eventName, metadata = {}) => {
+        const body = JSON.stringify({ eventName, ...base, metadata });
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon("/api/track", new Blob([body], { type: "application/json" }));
+          return;
+        }
+        fetch("/api/track", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+          keepalive: true
+        }).catch(() => {});
+      };
+      track("page_view", { page: "help" });
+      return { track };
+    })();
+
+    document.querySelectorAll("[data-track]").forEach(link => {
+      link.addEventListener("click", () => analytics.track(link.dataset.track));
+    });
+  </script>
+</body>
+</html>
