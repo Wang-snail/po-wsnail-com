@@ -13,6 +13,10 @@
   <meta property="og:title" content="亚马逊新品机会判断器">
   <meta property="og:description" content="上传原始表格，自动完成 ASIN 归并、市场容量分析、竞争分析、ROI 计算和可行指数报告。">
   <meta property="og:url" content="https://po.wsnail.com/">
+  <meta property="og:locale" content="zh_CN">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="亚马逊新品机会判断器">
+  <meta name="twitter:description" content="批量上传卖家精灵和亚马逊表格，自动生成市场容量、竞争强度、ROI 和新品可行性报告。">
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -55,7 +59,7 @@
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, "Microsoft YaHei", sans-serif;
-      font-size: 18px;
+      font-size: 16px;
       line-height: 1.68;
     }
 
@@ -82,17 +86,17 @@
     }
 
     h1 {
-      font-size: 34px;
+      font-size: 30px;
       line-height: 1.2;
     }
 
     h2 {
-      font-size: 23px;
+      font-size: 21px;
       margin-bottom: 14px;
     }
 
     h3 {
-      font-size: 19px;
+      font-size: 18px;
       margin-bottom: 10px;
     }
 
@@ -103,7 +107,7 @@
 
     .subhead {
       max-width: 760px;
-      font-size: 18px;
+      font-size: 16px;
     }
 
     .top-actions {
@@ -122,7 +126,7 @@
       background: #e6edf7;
       color: var(--ink);
       text-decoration: none;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
     }
 
@@ -138,7 +142,7 @@
       border-radius: 6px;
       background: #e6edf7;
       color: var(--ink);
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
     }
 
@@ -160,7 +164,7 @@
       border-radius: 8px;
       background: var(--surface);
       color: var(--muted);
-      font-size: 16px;
+      font-size: 15px;
       text-align: center;
     }
 
@@ -458,7 +462,7 @@
     .drop-zone strong {
       display: block;
       color: var(--ink);
-      font-size: 16px;
+      font-size: 15px;
     }
 
     .suggest-list {
@@ -466,7 +470,7 @@
       gap: 6px;
       margin-top: 10px;
       color: var(--muted);
-      font-size: 16px;
+      font-size: 15px;
       text-align: left;
     }
 
@@ -485,13 +489,13 @@
       border-radius: 6px;
       padding: 8px 10px;
       background: #fff;
-      font-size: 16px;
+      font-size: 15px;
     }
 
     label {
       display: block;
       color: var(--ink);
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
       margin-bottom: 6px;
     }
@@ -504,7 +508,7 @@
       background: #fff;
       color: var(--text);
       font: inherit;
-      font-size: 17px;
+      font-size: 16px;
     }
 
     input[type="file"] {
@@ -1325,9 +1329,6 @@
       }
 
       header {
-        position: sticky;
-        top: 0;
-        z-index: 30;
         grid-template-columns: minmax(360px, 1fr) auto auto;
         align-items: center;
         gap: 18px;
@@ -1522,9 +1523,6 @@
       }
 
       .tabs {
-        position: sticky;
-        top: 80px;
-        z-index: 12;
         background: var(--surface);
         margin: -18px -18px 16px;
         padding: 11px 18px 0;
@@ -1645,6 +1643,7 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="/public/react-workbench/workbench.css">
 </head>
 <body>
   <div class="app">
@@ -1666,7 +1665,7 @@
       </div>
     </header>
 
-    <section class="value-stage" aria-label="结果案例和轻报告">
+    <section id="reactWorkbenchHero" class="value-stage react-workbench-host" aria-label="结果案例和轻报告">
       <div class="case-card">
         <div>
           <div class="eyebrow">真实分析结果案例</div>
@@ -1881,6 +1880,7 @@
       </aside>
 
       <section class="panel workspace-results">
+        <div id="reactResultDock" class="react-result-dock"></div>
         <div class="tabs">
           <button class="tab active" data-tab="report">输出结论</button>
           <button class="tab" data-tab="clean">清洗结果</button>
@@ -1931,6 +1931,7 @@
 
   <button class="floating-contact" id="floatingContactBtn" type="button">联系开发者</button>
 
+  <script type="module" src="/public/react-workbench/workbench.js"></script>
   <script>
     const FIELD_ALIASES = {
       asin: ["asin", "ASIN", "商品编号", "父ASIN", "子ASIN", "商品ASIN", "产品ASIN", "产品ID", "产品id", "product id", "Product ID"],
@@ -4829,7 +4830,37 @@ B0A100001,24-8,1,3,5000,30,10,10,10,289.13,0,33,0,167,0.2,6,10,0,45,0`;
         </div>
         </div>
       `;
+      emitReactResultSummary(result, decisionView, actions, mainPath, tailPath);
       maybeEnhanceExplanation(result);
+    }
+
+    function emitReactResultSummary(result, decisionView, actions, mainPath, tailPath) {
+      const m = result.metrics || {};
+      const r = result.roi || {};
+      const s = result.scores || {};
+      const summary = {
+        level: decisionView.level,
+        decisionLabel: decisionView.label,
+        verdict: decisionView.text,
+        profit: signedMoney(r.profit),
+        roi: pct(r.roi),
+        riskLabel: `风险等级：${decisionView.riskLabel}`,
+        feasibility: s.feasibility,
+        credibility: s.credibility,
+        tailRatio: pct(result.tailOpportunity?.ratio || 0),
+        tailLabel: result.tailOpportunity?.label || "尾部机会待验证",
+        marketSummary: `样本 ${fmt(m.totalProducts || 0)} 个 ASIN`,
+        actions: actions.slice(0, 3),
+        mainPath,
+        tailPath
+      };
+      window.__poLastAnalysisSummary = summary;
+      window.dispatchEvent(new CustomEvent("po:analysis-result", { detail: summary }));
+    }
+
+    function clearReactResultSummary() {
+      window.__poLastAnalysisSummary = null;
+      window.dispatchEvent(new CustomEvent("po:analysis-result", { detail: null }));
     }
 
     function buildDecisionView(result) {
@@ -6058,6 +6089,7 @@ B0A100001,24-8,1,3,5000,30,10,10,10,289.13,0,33,0,167,0.2,6,10,0,45,0`;
       $("emptyState").classList.remove("hidden");
       $("cleanResult").className = "empty";
       $("cleanResult").textContent = "暂无清洗结果。";
+      clearReactResultSummary();
     }
 
     function syncRoiFields(changedId = "") {
