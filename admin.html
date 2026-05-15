@@ -374,8 +374,18 @@
     }
 
     function statusBadge(value) {
-      const text = value || "-";
-      const cls = ["approved", "paid", "已验证"].includes(text) ? "status done" : ["rejected", "failed"].includes(text) ? "status bad" : text === "-" ? "status neutral" : "status";
+      const statusTextMap = {
+        pending: "待支付",
+        pending_review: "待人工确认",
+        processing: "支付确认中",
+        approved: "已人工开通",
+        paid: "已自动到账",
+        rejected: "已拒绝",
+        failed: "异常"
+      };
+      const raw = value || "-";
+      const text = statusTextMap[raw] || raw;
+      const cls = ["approved", "paid", "已验证"].includes(raw) ? "status done" : ["rejected", "failed"].includes(raw) ? "status bad" : raw === "-" ? "status neutral" : "status";
       return `<span class="${cls}">${escapeHtml(text)}</span>`;
     }
 
@@ -388,7 +398,7 @@
       summary.classList.remove("hidden");
       summary.innerHTML = `
         <div class="kpi"><small>注册用户</small><strong>${Number(data.users || 0)}</strong></div>
-        <div class="kpi"><small>待确认订单</small><strong>${Number(data.pendingOrders || 0)}</strong></div>
+        <div class="kpi"><small>待处理订单</small><strong>${Number(data.pendingOrders || 0)}</strong></div>
         <div class="kpi"><small>已开通订单</small><strong>${Number(data.approvedOrders || 0)}</strong></div>
         <div class="kpi"><small>确认收入</small><strong>${moneyFromCents(data.revenueCents)}</strong></div>
       `;
@@ -457,6 +467,7 @@
                   <th>金额</th>
                   <th>状态</th>
                   <th>提交时间</th>
+                  <th>支付时间</th>
                   <th>审核时间</th>
                 </tr>
               </thead>
@@ -469,6 +480,7 @@
                     <td>${moneyFromCents(order.amount_cents)}</td>
                     <td>${statusBadge(order.status)}</td>
                     <td>${fmtTime(order.submitted_at || order.created_at)}</td>
+                    <td>${fmtTime(order.paid_at)}</td>
                     <td>${fmtTime(order.reviewed_at)}</td>
                   </tr>
                 `).join("")}

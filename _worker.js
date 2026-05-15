@@ -42,7 +42,9 @@ export default {
 
       if (request.method === "POST" && url.pathname === "/api/track") return await handleTrack(request, env, ctx);
       if (request.method === "GET" && url.pathname === "/api/stats") return await handleStats(url, env);
-      if (request.method === "POST" && (url.pathname === "/chat" || url.pathname === "/api/chat")) return await handleChat(request, env);
+      if (request.method === "POST" && (url.pathname === "/chat" || url.pathname === "/api/chat")) {
+        return jsonResponse({ success: false, error: "AI 功能暂未启用，当前版本使用纯代码分析。" }, 410);
+      }
       if (request.method === "GET" && (url.pathname === "/health" || url.pathname === "/api/health")) return jsonResponse({ status: "ok" });
     } catch (error) {
       return jsonResponse({ success: false, error: error.message || "server_error" }, 500);
@@ -351,13 +353,19 @@ async function handlePayCallback(request, env) {
     WHERE order_no = ? AND paid = 0 AND status NOT IN ('paid', 'approved', 'processing')
   `).bind(payjsOrderId, payjsOrderId, orderNo).run();
   if (Number(claimed?.meta?.changes || 0) > 0) {
-    await db.batch([
-      ...orderBenefitStatements(db, order, "payjs_paid"),
-      db.prepare("UPDATE po_orders SET status = 'paid', paid = 1, paid_at = ?, processed_at = ? WHERE order_no = ?")
-        .bind(paidAt, paidAt, orderNo)
-    ]);
-    await db.prepare("INSERT INTO po_user_events (user_id, event, ip, user_agent) VALUES (?, 'payjs_paid', ?, ?)")
-      .bind(order.user_id, request.headers.get("CF-Connecting-IP") || "", request.headers.get("User-Agent") || "").run();
+    try {
+      await db.batch([
+        ...orderBenefitStatements(db, order, "payjs_paid"),
+        db.prepare("UPDATE po_orders SET status = 'paid', paid = 1, paid_at = ?, processed_at = ? WHERE order_no = ?")
+          .bind(paidAt, paidAt, orderNo)
+      ]);
+      await db.prepare("INSERT INTO po_user_events (user_id, event, ip, user_agent) VALUES (?, 'payjs_paid', ?, ?)")
+        .bind(order.user_id, request.headers.get("CF-Connecting-IP") || "", request.headers.get("User-Agent") || "").run();
+    } catch (error) {
+      await db.prepare("UPDATE po_orders SET status = 'failed', processed_at = ? WHERE order_no = ? AND status = 'processing'")
+        .bind(nowIso(), orderNo).run();
+      throw error;
+    }
   } else {
     const current = await db.prepare("SELECT status, paid FROM po_orders WHERE order_no = ?").bind(orderNo).first();
     if (!(Number(current?.paid || 0) === 1 || ["paid", "approved"].includes(current?.status))) {
@@ -391,14 +399,14 @@ async function handleAdminReview(request, env, action) {
   if (action === "rejected") {
     if (order.status === "rejected") return adminHtml(`订单已拒绝，不重复处理。\n订单号：${orderNo}`);
     if (["approved", "paid"].includes(order.status)) return adminHtml("订单已开通，不能拒绝。", 400);
-    if (order.status !== "pending_review") return adminHtml(`当前订单状态为 ${order.status}，不能拒绝。`, 400);
+    if (!["pending_review", "pending", "processing"].includes(order.status)) return adminHtml(`当前订单状态为 ${order.status}，不能拒绝。`, 400);
     await db.prepare("UPDATE po_orders SET status = 'rejected', reviewed_at = ?, processed_at = ? WHERE order_no = ?").bind(nowIso(), nowIso(), orderNo).run();
     return adminHtml(`订单已拒绝：${orderNo}\n未增加用户权益。`);
   }
 
   if (["approved", "paid"].includes(order.status)) return adminHtml(`订单已开通，不重复处理。\n订单号：${orderNo}\n用户：${userDisplay(user)}`);
   if (order.status === "rejected") return adminHtml("订单已拒绝，不能开通。", 400);
-  if (order.status !== "pending_review") return adminHtml(`当前订单状态为 ${order.status}，不能人工确认。`, 400);
+  if (!["pending_review", "pending", "processing"].includes(order.status)) return adminHtml(`当前订单状态为 ${order.status}，不能人工确认。`, 400);
 
   await applyOrderBenefit(db, order, "manual_approved");
   await db.prepare("UPDATE po_orders SET status = 'approved', reviewed_at = ?, processed_at = ? WHERE order_no = ?").bind(nowIso(), nowIso(), orderNo).run();
@@ -410,7 +418,7 @@ async function handleAdminSummary(request, env) {
   const db = await poDb(env);
   if (!validAdmin(request, env)) return jsonResponse({ success: false, error: "管理员令牌无效" }, 403);
   const users = await db.prepare("SELECT COUNT(*) AS total FROM po_users").first();
-  const pending = await db.prepare("SELECT COUNT(*) AS total FROM po_orders WHERE status = 'pending_review'").first();
+  const pending = await db.prepare("SELECT COUNT(*) AS total FROM po_orders WHERE status IN ('pending_review', 'pending', 'processing')").first();
   const approved = await db.prepare("SELECT COUNT(*) AS total FROM po_orders WHERE status IN ('approved', 'paid')").first();
   const revenue = await db.prepare("SELECT SUM(amount_cents) AS total FROM po_orders WHERE status IN ('approved', 'paid')").first();
   return jsonResponse({ success: true, data: { users: users.total || 0, pendingOrders: pending.total || 0, approvedOrders: approved.total || 0, revenueCents: revenue.total || 0 } });
@@ -923,53 +931,6 @@ async function handleStats(url, env) {
     });
   } catch (error) {
     return jsonResponse({ ok: false, error: "stats_query_failed" }, 500);
-  }
-}
-
-async function handleChat(request, env) {
-  try {
-    const body = await request.json();
-    const message = body.message || "";
-    const history = body.history || [];
-    const response = await callMiniMax(message, history, env.MINIMAX_API_KEY);
-    await saveConversation(message, response, env.po_chat_logs);
-    return jsonResponse({ success: true, content: response });
-  } catch (error) {
-    return jsonResponse({ success: false, error: error.message }, 500);
-  }
-}
-
-async function callMiniMax(message, history, apiKey) {
-  if (!apiKey) throw new Error("缺少 MiniMax API Key");
-  const systemPrompt = `你是一个专业的亚马逊电商运营助手，擅长选品、listing优化、广告投放等。请用中文回复，输出具体、可执行、简洁的建议。`;
-  const messages = [
-    { role: "system", content: systemPrompt },
-    ...history.map(item => ({ role: item.role, content: item.content })),
-    { role: "user", content: message }
-  ];
-
-  const res = await fetch("https://api.minimaxi.com/v1/text/chatcompletion_v2", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({ model: "MiniMax-M2.5", messages, temperature: 0.7 })
-  });
-
-  const data = await res.json();
-  if (data.choices && data.choices[0]) return data.choices[0].message.content;
-  throw new Error(data.error?.message || "API 调用失败");
-}
-
-async function saveConversation(message, response, db) {
-  if (!db) return;
-  try {
-    await db.prepare("INSERT INTO conversations (message, response) VALUES (?, ?)")
-      .bind(message.substring(0, 5000), response.substring(0, 5000))
-      .run();
-  } catch (error) {
-    // Do not block the user if logging fails.
   }
 }
 

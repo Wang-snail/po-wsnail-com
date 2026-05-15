@@ -2,13 +2,12 @@
 // Po Chat - 前端配置
 // ============================================
 
-// 配置你的 Po Chat API 地址
-// 使用 Cloudflare Workers API，更安全
-const API_BASE_URL = 'https://po-chat-api.bing117119.workers.dev';
+// 旧聊天页当前未启用 API，保留本地占位逻辑。
+const API_BASE_URL = '';
 
 // 配置项
 const CONFIG = {
-  // API 端点（根据你的 ZeroClaw 配置调整）
+  // API 端点
   chatEndpoint: API_BASE_URL ? `${API_BASE_URL}/chat` : '',
   
   // 请求超时时间（毫秒）
@@ -32,6 +31,7 @@ const statusEl = document.getElementById('status');
 document.addEventListener('DOMContentLoaded', init);
 
 function init() {
+  if (!chatForm || !userInput || !messagesEl || !statusEl) return;
   chatForm.addEventListener('submit', handleSubmit);
   userInput.focus();
   
@@ -131,10 +131,9 @@ async function sendMessage(message, retryCount = 0) {
 
 // 占位符响应（API 未配置时）
 function getPlaceholderResponse(message) {
-  // TODO: 这里填入你的 ZeroClaw API 地址后删除此函数
   const responses = [
     `收到消息: "${message}"\n\n⚠️ API 暂未配置。请在 script.js 中设置 API_BASE_URL。`,
-    `你好！你说的问题是 "${message}"\n\n⚠️ 前端尚未连接 ZeroClaw API。\n请编辑 script.js 配置 API_BASE_URL。`,
+    `你好！你说的问题是 "${message}"\n\n⚠️ 当前聊天 API 未启用。`,
   ];
   return responses[Math.floor(Math.random() * responses.length)];
 }
