@@ -335,7 +335,7 @@
         <div class="line"><span>金额</span><strong>¥${Number(amount || 0).toLocaleString("zh-CN")}</strong></div>
         <div class="line"><span>状态</span><strong>${statusText(view.status)}</strong></div>
         <div class="line"><span>提交时间</span><strong>${view.submitted_at ? new Date(view.submitted_at).toLocaleString("zh-CN") : "-"}</strong></div>
-        <div class="line"><span>审核时间</span><strong>${view.reviewed_at ? new Date(view.reviewed_at).toLocaleString("zh-CN") : "-"}</strong></div>
+        <div class="line"><span>支付时间</span><strong>${view.paid_at ? new Date(view.paid_at).toLocaleString("zh-CN") : "-"}</strong></div>
       `;
       paymentPreview.innerHTML = `
         <div class="line"><span>应付金额</span><strong>¥${Number(amount || 0).toLocaleString("zh-CN")}</strong></div>
