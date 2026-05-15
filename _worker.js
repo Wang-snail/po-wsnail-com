@@ -344,7 +344,7 @@ async function createManualFallbackOrder(request, env, ctx, db, user, productId,
   const orderNo = `MANUAL_${formatOrderTime(new Date())}_${randomHex(3).toUpperCase()}`;
   const submittedAt = nowIso();
   const base = new URL(request.url).origin;
-  const qrPath = `/payment/${productId}.jpg`;
+  const qrPath = `/public/payment/${productId}.jpg`;
   await db.prepare(`
     INSERT INTO po_orders
       (order_no, user_id, product_id, product_type, amount_cents, credits, subscription_quota, status, paid, payment_qrcode, pay_url, submitted_at)
