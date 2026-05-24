@@ -169,6 +169,35 @@
       background: #edfdf3;
     }
 
+    .status-steps {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .step {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .step.active {
+      border-color: #9cc3ff;
+      background: #eef5ff;
+      color: #174ea6;
+    }
+
+    .step.done {
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+      color: #14532d;
+    }
+
     .qr-grid {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
@@ -219,8 +248,8 @@
     <header>
       <a class="brand" href="/">亚马逊新品机会判断器</a>
       <nav aria-label="主要导航">
-        <a href="/pricing">价格方案</a>
-        <a href="/checkout">购买信息</a>
+        <a href="/pricing.html">价格方案</a>
+        <a href="/checkout.html">购买信息</a>
       </nav>
     </header>
 
@@ -233,6 +262,7 @@
           <h2>支付二维码</h2>
           <form id="paymentForm">
             <div id="paymentPreview"></div>
+            <div id="statusSteps" class="status-steps" aria-label="支付进度"></div>
             <div class="qr-grid">
               <div class="qr-card">
                 <strong id="qrTitle">微信支付二维码</strong>
@@ -241,9 +271,12 @@
                 <p id="payLinkWrap" style="display:none;"><a id="payLink" href="#" target="_blank" rel="noopener">打开支付链接</a></p>
               </div>
             </div>
-            <p class="note">页面会每 5 秒检查支付状态。自动通道可用时付款后立即到账；若显示待人工核对，管理员确认到账后开通次数。</p>
+            <p class="note">页面会自动检查支付状态。自动通道可用时付款后立即到账；若显示待人工核对，管理员确认到账后开通次数。</p>
             <div style="margin-top:16px;">
               <button class="button" type="submit">创建 / 刷新支付二维码</button>
+            </div>
+            <div style="margin-top:10px;">
+              <button class="button" id="manualSubmitBtn" type="button" style="display:none;background:#16803c;">我已完成支付，提交核对</button>
             </div>
           </form>
           <div id="result" class="note success" style="display:none;"></div>
@@ -269,8 +302,17 @@
     const qrTitle = document.getElementById("qrTitle");
     const qrPlaceholder = document.getElementById("qrPlaceholder");
     const paymentIntro = document.getElementById("paymentIntro");
+    const manualSubmitBtn = document.getElementById("manualSubmitBtn");
+    const statusSteps = document.getElementById("statusSteps");
     let currentOrderNo = params.get("orderNo") || params.get("order_no") || "";
+    const ORDER_STATUS_FAST_POLL_MS = 5000;
+    const ORDER_STATUS_SLOW_POLL_MS = 15000;
+    const ORDER_STATUS_IDLE_POLL_MS = 60000;
+    const ORDER_STATUS_MAX_FAST_POLLS = 12;
+    const ORDER_STATUS_MAX_SLOW_POLLS = 36;
     let pollTimer = null;
+    let pollAttempts = 0;
+    let pollFailures = 0;
 
     function token() {
       return localStorage.getItem(TOKEN_KEY) || "";
@@ -303,6 +345,24 @@
       }[value] || value || "-";
     }
 
+    function renderSteps(view, manualPayment, manualReview) {
+      const status = view.status || "";
+      const paid = ["approved", "paid"].includes(status);
+      const submitted = manualReview || paid || (!manualPayment && ["processing"].includes(status));
+      const steps = manualPayment
+        ? [
+            { label: "1. 扫码付款", done: submitted || paid, active: status === "pending" },
+            { label: "2. 提交核对", done: manualReview || paid, active: status === "pending_review" },
+            { label: "3. 次数到账", done: paid, active: ["processing"].includes(status) }
+          ]
+        : [
+            { label: "1. 创建订单", done: Boolean(view.order_no), active: status === "pending" },
+            { label: "2. 自动确认", done: paid, active: status === "processing" },
+            { label: "3. 次数到账", done: paid, active: false }
+          ];
+      statusSteps.innerHTML = steps.map(step => `<div class="step ${step.done ? "done" : step.active ? "active" : ""}">${step.label}</div>`).join("");
+    }
+
     function activeDraft() {
       const productIdFromUrl = params.get("product");
       if (products[productIdFromUrl]) {
@@ -318,20 +378,29 @@
       const view = order || activeDraft();
       const productId = view.product_id || activeDraft().product_id || "report_5";
       const orderNo = currentOrderNo || view.order_no || "-";
+      const hasOrder = Boolean(currentOrderNo || view.order_no);
       const amount = view.amount_yuan || view.amount || Number(view.amount_cents || 0) / 100;
       const pay = payment || view.payment || view;
-      const manualReview = Boolean(pay.manual_review || view.status === "pending_review");
       const provider = pay.provider || view.payment_provider || "";
+      const manualPayment = Boolean(pay.manual_payment || provider === "manual" || view.payment_provider === "manual");
+      const manualReview = Boolean(pay.manual_review || (manualPayment && view.status === "pending_review"));
       const qrSrc = pay.qrcode || view.payment_qrcode || "";
       const payUrl = pay.pay_url || view.pay_url || qrSrc || "";
       paymentQr.style.display = qrSrc ? "" : "none";
       paymentQr.src = qrSrc || "";
       qrTitle.textContent = `${view.product_name || view.productName || products[productId]?.productName || "套餐"}微信支付二维码`;
       qrPlaceholder.style.display = qrSrc ? "none" : "flex";
-      qrPlaceholder.textContent = ["paid", "approved"].includes(view.status) ? "订单已支付并开通" : "支付二维码生成中或暂不可用";
-      paymentIntro.textContent = manualReview
-        ? "当前订单走人工核对：请扫码付款，管理员确认到账后次数会开通。"
-        : "当前订单走自动支付通道。支付成功后系统会自动到账并增加分析次数。";
+      qrPlaceholder.textContent = !hasOrder
+        ? "请先创建支付二维码"
+        : ["paid", "approved"].includes(view.status) ? "订单已支付并开通" : "支付二维码生成中或暂不可用";
+      paymentIntro.textContent = !hasOrder
+        ? "选择套餐后创建支付二维码。自动支付可用时会自动到账；不可用时走微信收款码人工核对。"
+        : manualReview
+        ? "已提交人工核对。管理员确认到账后，次数会自动开通。"
+        : manualPayment
+          ? "当前为微信收款码支付。请扫码付款，付款后点击“我已完成支付，提交核对”。"
+          : "当前订单走自动支付通道。支付成功后系统会自动到账并增加分析次数。";
+      manualSubmitBtn.style.display = manualPayment && view.status === "pending" ? "inline-flex" : "none";
       document.getElementById("payLinkWrap").style.display = payUrl ? "block" : "none";
       document.getElementById("payLink").href = payUrl || "#";
       summary.innerHTML = `
@@ -339,8 +408,8 @@
         <div class="line"><span>套餐</span><strong>${view.product_name || view.productName || view.product_id || "-"}</strong></div>
         <div class="line"><span>权益</span><strong>${view.desc || (view.subscription_quota ? view.subscription_quota + " 次月卡额度" : (view.credits ? view.credits + " 次完整分析" : "-"))}</strong></div>
         <div class="line"><span>金额</span><strong>¥${Number(amount || 0).toLocaleString("zh-CN")}</strong></div>
-        <div class="line"><span>通道</span><strong>${manualReview ? "人工核对" : (provider === "bufpay" ? "BufPay 自动支付" : "自动支付")}</strong></div>
-        <div class="line"><span>状态</span><strong>${manualReview ? "待人工核对" : statusText(view.status)}</strong></div>
+        <div class="line"><span>通道</span><strong>${!hasOrder ? "创建后确认" : manualPayment ? "微信收款码" : (provider === "bufpay" ? "BufPay 自动支付" : "自动支付")}</strong></div>
+        <div class="line"><span>状态</span><strong>${!hasOrder ? "未创建" : manualPayment && view.status === "pending" ? "待付款 / 待提交核对" : statusText(view.status)}</strong></div>
         <div class="line"><span>提交时间</span><strong>${view.submitted_at ? new Date(view.submitted_at).toLocaleString("zh-CN") : "-"}</strong></div>
         <div class="line"><span>支付时间</span><strong>${view.paid_at ? new Date(view.paid_at).toLocaleString("zh-CN") : "-"}</strong></div>
       `;
@@ -348,6 +417,7 @@
         <div class="line"><span>应付金额</span><strong>¥${Number(amount || 0).toLocaleString("zh-CN")}</strong></div>
         <div class="line"><span>订单号</span><strong>${orderNo || "-"}</strong></div>
       `;
+      renderSteps(view, manualPayment, manualReview);
     }
 
     renderSummary();
@@ -375,32 +445,95 @@
       }
     });
 
+    manualSubmitBtn.addEventListener("click", async () => {
+      if (!currentOrderNo) {
+        result.style.display = "block";
+        result.textContent = "请先创建支付订单。";
+        return;
+      }
+      manualSubmitBtn.disabled = true;
+      manualSubmitBtn.textContent = "提交中...";
+      try {
+        const data = await api("/api/orders/manual-submit", {
+          method: "POST",
+          body: JSON.stringify({ orderNo: currentOrderNo })
+        });
+        renderSummary(data.order, data.payment);
+        result.style.display = "block";
+        result.textContent = data.message || "已提交核对，请等待管理员确认。";
+        startPolling();
+      } catch (error) {
+        result.style.display = "block";
+        result.textContent = error.message;
+      } finally {
+        manualSubmitBtn.disabled = false;
+        manualSubmitBtn.textContent = "我已完成支付，提交核对";
+      }
+    });
+
+    function stopPolling() {
+      if (pollTimer) clearTimeout(pollTimer);
+      pollTimer = null;
+    }
+
+    function nextPollDelay() {
+      if (document.hidden) return ORDER_STATUS_IDLE_POLL_MS;
+      if (pollFailures > 0) return Math.min(ORDER_STATUS_IDLE_POLL_MS, ORDER_STATUS_FAST_POLL_MS * (2 ** Math.min(pollFailures, 3)));
+      if (pollAttempts < ORDER_STATUS_MAX_FAST_POLLS) return ORDER_STATUS_FAST_POLL_MS;
+      if (pollAttempts < ORDER_STATUS_MAX_FAST_POLLS + ORDER_STATUS_MAX_SLOW_POLLS) return ORDER_STATUS_SLOW_POLL_MS;
+      return ORDER_STATUS_IDLE_POLL_MS;
+    }
+
+    function scheduleNextPoll() {
+      stopPolling();
+      if (!currentOrderNo) return;
+      pollTimer = setTimeout(pollStatus, nextPollDelay());
+    }
+
     async function pollStatus() {
       if (!currentOrderNo) return;
+      if (document.hidden) {
+        scheduleNextPoll();
+        return;
+      }
+      pollAttempts += 1;
       try {
         const data = await api("/api/orders/status?orderNo=" + encodeURIComponent(currentOrderNo), { method: "GET" });
+        pollFailures = 0;
         renderSummary(data.order, data.payment);
         localStorage.setItem("po_user_status", JSON.stringify(data.user));
         if (["approved", "paid"].includes(data.order.status)) {
           result.style.display = "block";
           result.textContent = "已开通成功，次数已到账。";
-          clearInterval(pollTimer);
+          stopPolling();
+          return;
         } else if (["rejected", "failed"].includes(data.order.status)) {
           result.style.display = "block";
           result.textContent = statusText(data.order.status);
-          clearInterval(pollTimer);
+          stopPolling();
+          return;
         }
       } catch (error) {
+        pollFailures += 1;
         result.style.display = "block";
         result.textContent = error.message;
       }
+      scheduleNextPoll();
     }
 
     function startPolling() {
-      if (pollTimer) clearInterval(pollTimer);
+      stopPolling();
+      pollAttempts = 0;
+      pollFailures = 0;
       pollStatus();
-      pollTimer = setInterval(pollStatus, 5000);
     }
+
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && currentOrderNo) {
+        stopPolling();
+        pollStatus();
+      }
+    });
 
     if (currentOrderNo) startPolling();
   </script>

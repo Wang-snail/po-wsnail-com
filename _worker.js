@@ -15,12 +15,54 @@ const FREE_CREDITS_ON_REGISTER = 3;
 const EMAIL_VERIFY_BONUS_CREDITS = 5;
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
 const PBKDF2_ITERATIONS = 100000;
+let poSchemaReadyPromise = null;
+
+const BLOCKED_PROBE_EXACT = new Set([
+  "/.ds_store",
+  "/xmlrpc.php",
+  "/wp-login.php"
+]);
+
+const BLOCKED_PROBE_PATTERNS = [
+  /^\/\.(?:env|git|svn|hg|aws)(?:$|[./_-])/i,
+  /(?:^|\/)wp-(?:admin|content|includes)(?:\/|$)/i,
+  /\/wlwmanifest\.xml$/i,
+  /(?:^|\/)phpinfo(?:\.php)?$/i,
+  /(?:^|\/)(?:settings\.py|config\.(?:ya?ml|json|phpinfo)|app\.env)(?:$|[/?#])/i,
+  /\.php(?:$|[/?#])/i,
+  /^\/app\/kibana(?:\/|$)/i,
+  /^\/(?:debug|sapi\/debug|tool\/view\/phpinfo\.view\.php)(?:\/|$)/i,
+  /(?:^|\/)\.\.(?:\/|$)/
+];
+
+export function isBlockedProbePath(pathname) {
+  let normalized = pathname || "/";
+  try {
+    normalized = decodeURIComponent(normalized);
+  } catch {
+    return true;
+  }
+  normalized = normalized.replace(/\/{2,}/g, "/");
+  const lower = normalized.toLowerCase();
+  if (lower.startsWith("/.well-known/acme-challenge/")) return false;
+  if (BLOCKED_PROBE_EXACT.has(lower)) return true;
+  return BLOCKED_PROBE_PATTERNS.some(pattern => pattern.test(normalized));
+}
 
 export default {
   async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") return new Response(null, { headers: jsonHeaders });
 
     const url = new URL(request.url);
+    if (isBlockedProbePath(url.pathname)) {
+      return new Response("Forbidden", {
+        status: 403,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "X-Robots-Tag": "noindex, nofollow"
+        }
+      });
+    }
 
     try {
       if (request.method === "POST" && url.pathname === "/api/auth/register") return await handleRegister(request, env);
@@ -33,13 +75,16 @@ export default {
       if (request.method === "POST" && url.pathname === "/api/pay/callback") return await handlePayCallback(request, env);
       if (request.method === "POST" && url.pathname === "/api/pay/bufpay/callback") return await handleBufPayCallback(request, env);
       if (request.method === "POST" && url.pathname === "/api/orders/manual-create") return await handleManualCreateOrder(request, env, ctx);
+      if (request.method === "POST" && url.pathname === "/api/orders/manual-submit") return await handleManualSubmitOrder(request, env, ctx);
       if (request.method === "GET" && url.pathname === "/api/orders/status") return await handleOrderStatus(request, env);
+      if (request.method === "POST" && url.pathname === "/api/feedback") return await handleFeedbackSubmit(request, env, ctx);
       if (request.method === "GET" && url.pathname === "/api/admin/orders/approve") return await handleAdminReview(request, env, "approved");
       if (request.method === "GET" && url.pathname === "/api/admin/orders/reject") return await handleAdminReview(request, env, "rejected");
       if (request.method === "GET" && url.pathname === "/api/admin/po/summary") return await handleAdminSummary(request, env);
       if (request.method === "GET" && url.pathname === "/api/admin/po/users") return await handleAdminUsers(request, env);
       if (request.method === "GET" && url.pathname === "/api/admin/po/orders") return await handleAdminOrders(request, env);
       if (request.method === "GET" && url.pathname === "/api/admin/po/events") return await handleAdminEvents(request, env);
+      if (request.method === "GET" && url.pathname === "/api/admin/po/feedback") return await handleAdminFeedback(request, env);
 
       if (request.method === "POST" && url.pathname === "/api/track") return await handleTrack(request, env, ctx);
       if (request.method === "GET" && url.pathname === "/api/stats") return await handleStats(url, env);
@@ -258,6 +303,43 @@ async function handleManualCreateOrder(request, env, ctx) {
   return jsonResponse({ success: true, reused: false, message: "已提交确认，正在审核中。", order: publicOrder(order), user: publicUser(user) });
 }
 
+async function handleManualSubmitOrder(request, env, ctx) {
+  const db = await poDb(env);
+  const user = await requireUser(request, db);
+  if (!user) return jsonResponse({ success: false, error: "请先登录" }, 401);
+  const body = await readJson(request);
+  const orderNo = String(body.orderNo || body.order_no || "");
+  if (!orderNo) return jsonResponse({ success: false, error: "缺少订单号" }, 400);
+
+  const order = await db.prepare("SELECT * FROM po_orders WHERE order_no = ? AND user_id = ?").bind(orderNo, user.id).first();
+  if (!order) return jsonResponse({ success: false, error: "订单不存在" }, 404);
+  if ((order.payment_provider || paymentProviderFromOrder(order)) !== "manual") {
+    return jsonResponse({ success: false, error: "该订单不是人工核对订单" }, 400);
+  }
+  if (["approved", "paid"].includes(order.status)) {
+    const refreshed = await refreshSubscription(db, user.id);
+    return jsonResponse({ success: true, message: "订单已开通，不需要重复提交。", order: publicOrder(order), payment: publicPayment(order), user: publicUser(refreshed) });
+  }
+  if (order.status === "pending_review") {
+    return jsonResponse({ success: true, reused: true, message: "已提交核对，请等待管理员确认到账。", order: publicOrder(order), payment: publicPayment(order), user: publicUser(user) });
+  }
+  if (["rejected", "failed"].includes(order.status)) {
+    return jsonResponse({ success: false, error: `当前订单状态为 ${order.status}，不能提交核对。` }, 400);
+  }
+
+  const submittedAt = nowIso();
+  const claimed = await db.prepare(`
+    UPDATE po_orders
+    SET status = 'pending_review', submitted_at = ?
+    WHERE order_no = ? AND user_id = ? AND payment_provider = 'manual' AND status = 'pending'
+  `).bind(submittedAt, orderNo, user.id).run();
+  const updated = await db.prepare("SELECT * FROM po_orders WHERE order_no = ?").bind(orderNo).first();
+  if (Number(claimed?.meta?.changes || 0) > 0) {
+    ctx.waitUntil(notifyAdmin(updated, user, env).catch(error => console.error("notify failed", error)));
+  }
+  return jsonResponse({ success: true, message: "已提交核对。管理员确认到账后，次数会自动到账。", order: publicOrder(updated), payment: publicPayment(updated), user: publicUser(user) });
+}
+
 async function handlePayCreate(request, env, ctx) {
   const db = await poDb(env);
   const user = await requireUser(request, db);
@@ -396,8 +478,9 @@ async function createManualFallbackOrder(request, env, ctx, db, user, productId,
   const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, "+00:00");
   const existing = await db.prepare(`
     SELECT * FROM po_orders
-    WHERE user_id = ? AND product_id = ? AND status = 'pending_review'
-      AND submitted_at >= ?
+    WHERE user_id = ? AND product_id = ? AND payment_provider = 'manual'
+      AND status IN ('pending', 'pending_review')
+      AND created_at >= ?
     ORDER BY id DESC LIMIT 1
   `).bind(user.id, productId, tenMinutesAgo).first();
   if (existing) {
@@ -406,7 +489,7 @@ async function createManualFallbackOrder(request, env, ctx, db, user, productId,
       success: true,
       reused: true,
       fallback: "manual_review",
-      message: "当前自动支付通道暂未配置，已复用待核对订单。",
+      message: existing.status === "pending_review" ? "已复用待核对订单，请等待管理员确认。" : "已复用待付款订单。扫码付款后点击“我已完成支付”。",
       order: publicOrder(existing),
       payment,
       user: publicUser(user)
@@ -420,15 +503,14 @@ async function createManualFallbackOrder(request, env, ctx, db, user, productId,
   await db.prepare(`
     INSERT INTO po_orders
       (order_no, user_id, product_id, product_type, amount_cents, credits, subscription_quota, status, paid, payment_qrcode, pay_url, submitted_at, payment_provider)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_review', 0, ?, ?, ?, 'manual')
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, ?, ?, ?, 'manual')
   `).bind(orderNo, user.id, productId, product.product_type, product.amount_cents, product.credits, product.subscription_quota, qrPath, `${base}${qrPath}`, submittedAt).run();
   const order = await db.prepare("SELECT * FROM po_orders WHERE order_no = ?").bind(orderNo).first();
-  ctx.waitUntil(notifyAdmin(order, user, env).catch(error => console.error("notify failed", error)));
   return jsonResponse({
     success: true,
     reused: false,
     fallback: "manual_review",
-    message: "自动支付通道暂未配置，已创建待人工核对订单。付款后管理员确认到账即可开通。",
+    message: "自动支付通道暂未配置，已创建收款码订单。扫码付款后请点击“我已完成支付”。",
     order: publicOrder(order),
     payment: publicPayment(order),
     user: publicUser(user)
@@ -548,14 +630,19 @@ async function handleBufPayCallback(request, env) {
 }
 
 async function handleOrderStatus(request, env) {
+  const auth = request.headers.get("Authorization") || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : new URL(request.url).searchParams.get("token") || "";
+  if (!token) return jsonResponse({ success: false, error: "请先登录" }, 401);
+  const url = new URL(request.url);
+  const orderNo = url.searchParams.get("orderNo") || url.searchParams.get("order_no") || "";
+  if (!orderNo) return jsonResponse({ success: false, error: "缺少订单号" }, 400);
+
   const db = await poDb(env);
   const user = await requireUser(request, db);
   if (!user) return jsonResponse({ success: false, error: "请先登录" }, 401);
-  const url = new URL(request.url);
-  const orderNo = url.searchParams.get("orderNo") || url.searchParams.get("order_no") || "";
   const order = await db.prepare("SELECT * FROM po_orders WHERE order_no = ? AND user_id = ?").bind(orderNo, user.id).first();
   if (!order) return jsonResponse({ success: false, error: "订单不存在" }, 404);
-  const refreshed = await refreshSubscription(db, user.id);
+  const refreshed = await refreshSubscriptionFromRow(db, user);
   return jsonResponse({ success: true, order: publicOrder(order), payment: publicPayment(order), user: publicUser(refreshed) });
 }
 
@@ -635,6 +722,67 @@ async function handleAdminEvents(request, env) {
   return jsonResponse({ success: true, data: rows.results || [] });
 }
 
+async function handleAdminFeedback(request, env) {
+  if (!validAdmin(request, env)) return jsonResponse({ success: false, error: "管理员令牌无效" }, 403);
+  const db = await poDb(env);
+  const rows = await db.prepare(`
+    SELECT id, message, images_json, page_url, user_agent, ip, status, created_at
+    FROM po_feedback
+    ORDER BY id DESC
+    LIMIT 200
+  `).all();
+  return jsonResponse({
+    success: true,
+    data: (rows.results || []).map(row => ({
+      ...row,
+      images: arrayOrEmpty(safeJsonParse(row.images_json, []))
+    }))
+  });
+}
+
+async function handleFeedbackSubmit(request, env, ctx) {
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (contentLength > 1024 * 1024) return jsonResponse({ success: false, error: "反馈内容过大，请减少图片后重试" }, 413);
+
+  let body = {};
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ success: false, error: "反馈内容格式不正确" }, 400);
+  }
+
+  const message = String(body.message || "").trim().slice(0, 3000);
+  if (message.length < 5) return jsonResponse({ success: false, error: "请至少写 5 个字说明问题" }, 400);
+
+  const images = normalizeFeedbackImages(body.images);
+  const pageUrl = clean(body.pageUrl || body.page_url || "", 300);
+  const userAgent = clean(request.headers.get("User-Agent") || "", 260);
+  const ip = clean(request.headers.get("CF-Connecting-IP") || request.headers.get("x-forwarded-for") || "", 80);
+  const createdAt = nowIso();
+
+  const db = await poDb(env);
+  const insert = await db.prepare(`
+    INSERT INTO po_feedback (message, images_json, page_url, user_agent, ip, status, created_at)
+    VALUES (?, ?, ?, ?, ?, 'new', ?)
+  `).bind(message, JSON.stringify(images), pageUrl, userAgent, ip, createdAt).run();
+  const id = Number.isFinite(Number(insert?.meta?.last_row_id)) ? Number(insert.meta.last_row_id) : null;
+  const feedback = {
+    id,
+    message,
+    images,
+    page_url: pageUrl,
+    user_agent: userAgent,
+    ip,
+    created_at: createdAt
+  };
+
+  ctx.waitUntil(sendFeedbackEmail(feedback, env).catch(error => {
+    console.error("feedback email failed", error.message || error);
+  }));
+
+  return jsonResponse({ success: true, message: "已提交，感谢反馈。", id });
+}
+
 async function applyOrderBenefit(db, order, reason) {
   const statements = orderBenefitStatements(db, order, reason);
   if (statements.length) await db.batch(statements);
@@ -674,7 +822,13 @@ async function requireUser(request, db) {
 async function poDb(env) {
   const db = env.PO_DB || env.po_chat_logs || env.ANALYTICS_DB;
   if (!db) throw new Error("po_db_not_bound");
-  await ensurePoSchema(db);
+  if (!poSchemaReadyPromise) {
+    poSchemaReadyPromise = ensurePoSchema(db).catch(error => {
+      poSchemaReadyPromise = null;
+      throw error;
+    });
+  }
+  await poSchemaReadyPromise;
   return db;
 }
 
@@ -747,9 +901,20 @@ async function ensurePoSchema(db) {
       user_agent TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS po_feedback (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      message TEXT NOT NULL,
+      images_json TEXT,
+      page_url TEXT,
+      user_agent TEXT,
+      ip TEXT,
+      status TEXT NOT NULL DEFAULT 'new',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_po_sessions_token ON po_sessions(token)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_po_orders_user ON po_orders(user_id)"),
-    db.prepare("CREATE INDEX IF NOT EXISTS idx_po_events_user ON po_user_events(user_id)")
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_po_events_user ON po_user_events(user_id)"),
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_po_feedback_created ON po_feedback(created_at)")
   ]);
   await ensurePoColumns(db);
 }
@@ -779,9 +944,14 @@ async function ensurePoColumns(db) {
 
 async function refreshSubscription(db, userId) {
   const user = await db.prepare("SELECT * FROM po_users WHERE id = ?").bind(userId).first();
+  return refreshSubscriptionFromRow(db, user);
+}
+
+async function refreshSubscriptionFromRow(db, user) {
+  if (!user) return null;
   if (user?.subscription_type && !subscriptionValid(user)) {
-    await db.prepare("UPDATE po_users SET subscription_type = NULL, subscription_expire_at = NULL, subscription_quota = 0 WHERE id = ?").bind(userId).run();
-    return db.prepare("SELECT * FROM po_users WHERE id = ?").bind(userId).first();
+    await db.prepare("UPDATE po_users SET subscription_type = NULL, subscription_expire_at = NULL, subscription_quota = 0 WHERE id = ?").bind(user.id).run();
+    return db.prepare("SELECT * FROM po_users WHERE id = ?").bind(user.id).first();
   }
   return user;
 }
@@ -853,7 +1023,8 @@ function publicPayment(order) {
     pay_url: order.pay_url || order.payment_qrcode || "",
     payjs_order_id: payjsOrderId,
     provider_order_id: order.provider_order_id || "",
-    manual_review: provider === "manual" || (!payjsOrderId && order.status === "pending_review"),
+    manual_review: provider === "manual" && order.status === "pending_review",
+    manual_payment: provider === "manual",
     amount_cents: Number(order.amount_cents || 0),
     amount_yuan: Number(order.amount_cents || 0) / 100
   };
@@ -961,6 +1132,72 @@ async function sendVerificationEmail(user, token, env) {
   }
 
   console.log("[email verification]", email, verifyUrl);
+  return false;
+}
+
+async function sendFeedbackEmail(feedback, env) {
+  const to = normalizeEmail(env.FEEDBACK_TO_EMAIL || "hi@wsnail.com");
+  if (!to) return false;
+  const subject = `po.wsnail.com 用户问题反馈${feedback.id ? ` #${feedback.id}` : ""}`;
+  const imageCount = Array.isArray(feedback.images) ? feedback.images.length : 0;
+  const text = [
+    "用户提交了一条问题反馈。",
+    "",
+    `提交时间：${formatLocalTime(feedback.created_at)}`,
+    `来源页面：${feedback.page_url || "-"}`,
+    `IP：${feedback.ip || "-"}`,
+    `User-Agent：${feedback.user_agent || "-"}`,
+    "",
+    "问题内容：",
+    feedback.message,
+    "",
+    `图片：${imageCount} 张`
+  ].join("\n");
+  const imageHtml = (feedback.images || []).map((src, index) => (
+    `<p style="margin:12px 0 0;"><img src="${src}" alt="反馈图片 ${index + 1}" style="display:block;max-width:100%;border:1px solid #d9e2ec;border-radius:8px;"></p>`
+  )).join("");
+  const html = `
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;line-height:1.7;color:#172033;">
+      <h2>用户问题反馈${feedback.id ? ` #${feedback.id}` : ""}</h2>
+      <p><strong>提交时间：</strong>${escapeHtml(formatLocalTime(feedback.created_at))}</p>
+      <p><strong>来源页面：</strong>${escapeHtml(feedback.page_url || "-")}</p>
+      <p><strong>IP：</strong>${escapeHtml(feedback.ip || "-")}</p>
+      <p><strong>User-Agent：</strong>${escapeHtml(feedback.user_agent || "-")}</p>
+      <hr style="border:0;border-top:1px solid #d9e2ec;margin:16px 0;">
+      <h3>问题内容</h3>
+      <p style="white-space:pre-wrap;">${escapeHtml(feedback.message)}</p>
+      ${imageHtml}
+    </div>
+  `;
+
+  if (env.RESEND_API_KEY) {
+    const from = normalizeEmailFrom(env.EMAIL_FROM);
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ from, to, subject, text, html })
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      console.error("feedback resend failed", response.status, detail.slice(0, 300));
+      return false;
+    }
+    return true;
+  }
+
+  if (env.EMAIL_WEBHOOK_URL) {
+    const response = await fetch(env.EMAIL_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to, subject, text, html, feedback })
+    });
+    return response.ok;
+  }
+
+  console.log("[feedback email]", text);
   return false;
 }
 
@@ -1196,6 +1433,34 @@ async function readJson(request) {
   const size = Number(request.headers.get("content-length") || 0);
   if (size > 1024 * 1024) throw new Error("请求体过大");
   return request.json();
+}
+
+function normalizeFeedbackImages(value) {
+  if (!Array.isArray(value)) return [];
+  const images = [];
+  let totalLength = 0;
+  for (const item of value.slice(0, 3)) {
+    const src = String(item || "").trim();
+    if (!/^data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/i.test(src)) continue;
+    if (src.length > 360000) continue;
+    totalLength += src.length;
+    if (totalLength > 900000) break;
+    images.push(src);
+  }
+  return images;
+}
+
+function safeJsonParse(value, fallback) {
+  try {
+    const parsed = JSON.parse(value || "");
+    return parsed ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function arrayOrEmpty(value) {
+  return Array.isArray(value) ? value : [];
 }
 
 async function readPayjsCallback(request) {

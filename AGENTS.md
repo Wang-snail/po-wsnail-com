@@ -34,8 +34,8 @@ Core flow:
 
 ## Deployment Notes
 
-- Public frontend/project: `/Users/woniu/sites/po-wsnail-com`
+- Public frontend/project: `/Users/woniu/dm/进化网站/sites/po-wsnail-com`
 - Local MVP mirror: `/Users/woniu/dm/进化网站/workspace/亚马逊电商系统/analyzer/opportunity-mvp`
-- Admin frontend: `/Users/woniu/sites/hou-wsnail-com`
+- Admin frontend: `/Users/woniu/dm/进化网站/sites/hou-wsnail-com`
 - Deploy PO site with `wrangler pages deploy . --project-name po-wsnail-com --commit-dirty=true`.
 - Deploy admin site with `npm run build`, then `wrangler pages deploy dist --project-name hou-wsnail-com --commit-dirty=true`.

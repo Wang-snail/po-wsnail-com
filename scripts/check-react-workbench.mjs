@@ -31,7 +31,7 @@ if (existsSync(resolve(root, appPath))) {
   const app = read(appPath);
   assert(app.includes("@xyflow/react"), "React Flow is used for the workflow visualization");
   assert(app.includes("@tremor/react"), "Tremor is used for metric cards");
-  assert(app.includes("MagicMetricBeam"), "Magic UI style motion layer is present");
+  assert(app.includes("亚马逊新品机会判断器") || index.includes("亚马逊新品机会判断器"), "React workbench uses product-facing decision copy");
   assert(app.includes("data-testid=\"react-workbench\""), "React workbench has a stable test marker");
   assert(app.includes("function ResultDock"), "React result dock component exists");
   assert(app.includes("po:analysis-result"), "React result dock listens for analysis updates");

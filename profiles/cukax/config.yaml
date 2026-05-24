@@ -5,7 +5,7 @@ model:
 
 terminal:
   backend: "local"
-  cwd: "~/sites/po.wsnail.com"
+  cwd: "~/sites/po-wsnail-com"
   timeout: 300
 
 agent:
@@ -14,4 +14,4 @@ agent:
 skills:
   external_dirs:
     - ~/dm/亚马逊团队/skills
-    - ~/sites/po.wsnail.com/skills/skills
+    - ~/sites/po-wsnail-com/skills/skills

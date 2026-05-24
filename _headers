@@ -1,0 +1,48 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400
+
+/index.html
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400
+
+/help
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400
+
+/help.html
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400
+
+/pricing
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400
+
+/pricing.html
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400
+
+/checkout
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400
+
+/checkout.html
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400
+
+/orders
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400
+
+/orders.html
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400
+
+/admin
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400
+
+/admin.html
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400
+
+/public/react-workbench/*
+  Cache-Control: public, max-age=300, s-maxage=86400, stale-while-revalidate=86400
+
+/public/payment/*
+  Cache-Control: public, max-age=3600, s-maxage=604800, stale-while-revalidate=86400
+
+/public/contact-wechat.jpg
+  Cache-Control: public, max-age=3600, s-maxage=604800, stale-while-revalidate=86400

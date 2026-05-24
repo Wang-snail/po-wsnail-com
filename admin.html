@@ -221,6 +221,33 @@
       color: var(--bad);
     }
 
+    .feedback-message {
+      max-width: 420px;
+      white-space: pre-wrap;
+    }
+
+    .feedback-images {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .feedback-images a {
+      display: inline-flex;
+      width: 54px;
+      height: 54px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .feedback-images img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
     .status.neutral {
       background: var(--surface-soft);
       color: var(--muted);
@@ -289,8 +316,8 @@
     <header>
       <a class="brand" href="/">亚马逊新品机会判断器</a>
       <nav aria-label="主要导航">
-        <a href="/pricing">价格方案</a>
-        <a href="/orders">付款页</a>
+        <a href="/pricing.html">价格方案</a>
+        <a href="/orders.html">付款页</a>
         <a href="/">分析工具</a>
       </nav>
     </header>
@@ -319,6 +346,7 @@
         <button class="tab active" data-tab="users" type="button">用户</button>
         <button class="tab" data-tab="orders" type="button">订单</button>
         <button class="tab" data-tab="events" type="button">事件</button>
+        <button class="tab" data-tab="feedback" type="button">问题反馈</button>
       </div>
 
       <section id="content"></section>
@@ -336,6 +364,7 @@
       users: [],
       orders: [],
       events: [],
+      feedback: [],
       summary: null
     };
 
@@ -527,12 +556,60 @@
       `;
     }
 
+    function renderFeedback() {
+      if (!state.feedback.length) {
+        content.innerHTML = `<div class="empty">暂无问题反馈。</div>`;
+        return;
+      }
+      content.innerHTML = `
+        <section class="panel">
+          <h2>问题反馈</h2>
+          <p>前台“问题反馈”提交的内容只在这里展示，同时会发送到站点配置的收件邮箱。</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>时间</th>
+                  <th>反馈内容</th>
+                  <th>图片</th>
+                  <th>来源页面</th>
+                  <th>IP</th>
+                  <th>User Agent</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${state.feedback.map(item => `
+                  <tr>
+                    <td>${fmtTime(item.created_at)}</td>
+                    <td class="feedback-message">${escapeHtml(item.message || "-")}</td>
+                    <td>
+                      <div class="feedback-images">
+                        ${(item.images || []).map((src, index) => `
+                          <a href="${src}" target="_blank" rel="noopener" title="查看反馈图片 ${index + 1}">
+                            <img src="${src}" alt="反馈图片 ${index + 1}">
+                          </a>
+                        `).join("") || "-"}
+                      </div>
+                    </td>
+                    <td class="muted">${escapeHtml(item.page_url || "-")}</td>
+                    <td>${escapeHtml(item.ip || "-")}</td>
+                    <td class="muted">${escapeHtml(item.user_agent || "-")}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+
     function renderActiveTab() {
       document.querySelectorAll(".tab").forEach(button => {
         button.classList.toggle("active", button.dataset.tab === state.activeTab);
       });
       if (state.activeTab === "orders") return renderOrders();
       if (state.activeTab === "events") return renderEvents();
+      if (state.activeTab === "feedback") return renderFeedback();
       return renderUsers();
     }
 
@@ -541,20 +618,22 @@
       content.innerHTML = "";
       try {
         sessionStorage.setItem("po_admin_token", adminToken());
-        const [summaryData, users, orders, events] = await Promise.all([
+        const [summaryData, users, orders, events, feedback] = await Promise.all([
           adminFetch("/api/admin/po/summary"),
           adminFetch("/api/admin/po/users"),
           adminFetch("/api/admin/po/orders"),
-          adminFetch("/api/admin/po/events")
+          adminFetch("/api/admin/po/events"),
+          adminFetch("/api/admin/po/feedback")
         ]);
         state.summary = summaryData;
         state.users = users || [];
         state.orders = orders || [];
         state.events = events || [];
+        state.feedback = feedback || [];
         tabs.classList.remove("hidden");
         renderSummary();
         renderActiveTab();
-        statusText.textContent = `已读取：${state.users.length} 个用户，${state.orders.length} 个订单，${state.events.length} 条事件。`;
+        statusText.textContent = `已读取：${state.users.length} 个用户，${state.orders.length} 个订单，${state.events.length} 条事件，${state.feedback.length} 条反馈。`;
       } catch (error) {
         summary.classList.add("hidden");
         tabs.classList.add("hidden");
