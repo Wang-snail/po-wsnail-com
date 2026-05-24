@@ -8,6 +8,7 @@
   gap: 12px;
   width: 100%;
   color: #172033;
+  font-size: 17px;
 }
 
 .rw-magic-beam {
@@ -1137,7 +1138,7 @@ body .app > header {
 
 .react-workbench-mounted.value-stage {
   margin: 0;
-  padding: 14px 20px 22px;
+  padding: 10px 16px 18px;
 }
 
 .rw-command-center {
@@ -1376,23 +1377,23 @@ body .app > header {
 
 .rw-page-workflow {
   display: grid;
-  grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: minmax(248px, 286px) minmax(0, 1fr);
+  gap: 14px;
   align-items: start;
-  min-height: calc(100vh - 102px);
+  min-height: 0;
 }
 
 .rw-step-rail {
   position: sticky;
   top: 86px;
   display: grid;
-  gap: 14px;
+  gap: 12px;
   max-height: calc(100vh - 110px);
   overflow: auto;
   border: 1px solid #cbd5e1;
   border-radius: 18px;
   background: #fff;
-  padding: 16px;
+  padding: 14px;
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
 }
 
@@ -1485,24 +1486,23 @@ body .app > header {
 
 .rw-step-page {
   display: none;
-  min-height: calc(100vh - 102px);
+  min-height: auto;
   border: 1px solid #cbd5e1;
   border-radius: 18px;
   background: #fff;
-  padding: 22px;
+  padding: 18px;
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
 }
 
 .rw-step-page.is-active {
   display: grid;
   align-content: start;
-  gap: 18px;
+  gap: 14px;
 }
 
 .rw-step-page-head {
   display: grid;
   gap: 8px;
-  max-width: 760px;
   padding-bottom: 14px;
   border-bottom: 1px solid #e2e8f0;
 }
@@ -1517,7 +1517,7 @@ body .app > header {
 .rw-step-page-head p {
   margin: 0;
   color: #334155;
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.58;
 }
 
@@ -1650,7 +1650,16 @@ body .app > header {
 
 @media (max-width: 640px) {
   .react-workbench-mounted.value-stage {
-    padding: 12px;
+    padding: 8px 0 12px;
+  }
+
+  .rw-shell {
+    gap: 8px;
+    font-size: 17px;
+  }
+
+  .rw-page-workflow {
+    gap: 10px;
   }
 
   .rw-panel {
@@ -1670,15 +1679,118 @@ body .app > header {
 
   .rw-step-rail nav {
     grid-template-columns: 1fr 1fr;
+    gap: 8px;
   }
 
-  .rw-step-page {
-    padding: 16px;
+  .rw-step-rail {
+    gap: 10px;
+    padding: 10px;
     border-radius: 14px;
   }
 
+  .rw-step-rail-head {
+    padding-bottom: 8px;
+  }
+
+  .rw-step-rail-head h2 {
+    font-size: 24px;
+  }
+
+  .rw-step-rail-head p {
+    display: none;
+  }
+
+  .rw-step-nav {
+    grid-template-columns: 26px minmax(0, 1fr);
+    justify-items: start;
+    gap: 6px;
+    padding: 8px 9px;
+    text-align: left;
+  }
+
+  .rw-step-nav span {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+  }
+
+  .rw-step-nav strong {
+    align-self: center;
+    font-size: 16px;
+  }
+
+  .rw-step-nav small {
+    display: none;
+  }
+
+  .rw-step-rail-actions {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding-top: 8px;
+  }
+
+  .rw-step-rail-actions .rw-button {
+    min-height: 40px;
+    font-size: 15px;
+  }
+
+  .rw-step-page {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .rw-step-page.is-active {
+    gap: 12px;
+  }
+
+  .rw-step-page-head {
+    gap: 6px;
+    padding-bottom: 10px;
+  }
+
   .rw-step-page-head h2 {
-    font-size: 28px;
+    font-size: 30px;
+  }
+
+  .rw-step-page-head p {
+    font-size: 17px;
+    line-height: 1.55;
+  }
+
+  .rw-workbench-control-mount {
+    gap: 10px;
+  }
+
+  .rw-workbench-control-mount .operator-title {
+    display: none;
+  }
+
+  .rw-workbench-control-mount > .operator-card.is-in-workbench {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .rw-workbench-control-mount .drop-zone {
+    min-height: 122px;
+    border-radius: 12px;
+  }
+
+  .rw-workbench-control-mount .drop-zone strong {
+    font-size: 21px;
+  }
+
+  .rw-workbench-control-mount .drop-zone p,
+  .rw-workbench-control-mount .suggest-list {
+    font-size: 16px;
+  }
+
+  .rw-page-actions {
+    gap: 8px;
+  }
+
+  .rw-page-actions .rw-button {
+    min-height: 44px;
+    font-size: 16px;
   }
 
   .rw-decision-panel h2 {

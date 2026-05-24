@@ -110,8 +110,8 @@
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, "Microsoft YaHei", sans-serif;
-      font-size: 16px;
-      line-height: 1.68;
+      font-size: 17px;
+      line-height: 1.64;
     }
 
     .app {
@@ -2343,16 +2343,50 @@
     }
 
     @media (max-width: 680px) {
+      body {
+        font-size: 17px;
+        line-height: 1.62;
+      }
+
       .app {
-        padding: 16px;
+        padding: 12px;
       }
 
       header {
         grid-template-columns: 1fr;
+        gap: 10px;
+        margin-bottom: 10px;
+        padding-bottom: 12px;
+      }
+
+      .brand-lockup {
+        grid-template-columns: 42px minmax(0, 1fr);
+        gap: 10px;
+      }
+
+      .brand-mark {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+      }
+
+      h1 {
+        font-size: 26px;
       }
 
       .top-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
         width: 100%;
+      }
+
+      .text-link,
+      .nav-button {
+        justify-content: center;
+        min-height: 40px;
+        padding: 8px 9px;
+        font-size: 16px;
       }
 
       .header-auth-card,
@@ -2361,9 +2395,15 @@
         grid-template-columns: 1fr;
       }
 
+      .header-auth-card {
+        grid-column: 1 / -1;
+      }
+
       .header-auth-card summary {
         width: 100%;
         justify-content: space-between;
+        min-height: 42px;
+        font-size: 17px;
       }
 
       .header-auth-dropdown {
@@ -2374,8 +2414,22 @@
         border-radius: 0 0 8px 8px;
       }
 
-      .workflow, .kpis, .grid-2, .grid-3, .seo-grid, .seo-faq, .seo-story-head, .analysis-command-panel, .analysis-command-panel .input-operator-card .grid-2, .reason-grid, .chart-grid, .upload-row, .decision-metrics, .dual-conclusion, .quick-form {
+      .workflow {
+        display: none;
+      }
+
+      .kpis, .grid-2, .grid-3, .seo-grid, .seo-faq, .seo-story-head, .analysis-command-panel, .analysis-command-panel .input-operator-card .grid-2, .reason-grid, .chart-grid, .upload-row, .decision-metrics, .dual-conclusion, .quick-form {
         grid-template-columns: 1fr;
+      }
+
+      input,
+      select,
+      textarea {
+        font-size: 17px;
+      }
+
+      button {
+        font-size: 17px;
       }
 
       .analysis-command-panel {
@@ -2411,7 +2465,7 @@
       }
     }
   </style>
-  <link rel="stylesheet" href="/public/react-workbench/workbench.css?v=monthly-data-1">
+  <link rel="stylesheet" href="/public/react-workbench/workbench.css?v=density-2">
 </head>
 <body>
   <div class="app">
@@ -2865,7 +2919,7 @@
 
   <button class="floating-contact" id="floatingContactBtn" type="button">联系开发者</button>
 
-  <script type="module" src="/public/react-workbench/workbench.js?v=monthly-data-1"></script>
+  <script type="module" src="/public/react-workbench/workbench.js?v=density-2"></script>
   <script>
     const FIELD_ALIASES = {
       asin: ["asin", "ASIN", "商品编号", "父ASIN", "子ASIN", "商品ASIN", "产品ASIN", "产品ID", "产品id", "product id", "Product ID"],
