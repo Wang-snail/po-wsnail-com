@@ -1,0 +1,8 @@
+name = "po-wsnail-com"
+pages_build_output_dir = "."
+compatibility_date = "2026-04-26"
+
+[[d1_databases]]
+binding = "po_chat_logs"
+database_name = "po_chat_logs"
+database_id = "204d26ae-e39e-4e38-95d2-9c2eff9ca1af"

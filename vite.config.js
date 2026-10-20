@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   publicDir: false,
   build: {
-    outDir: "public/react-workbench",
+    outDir: "public/public/react-workbench",
     emptyOutDir: true,
     sourcemap: false,
     rollupOptions: {

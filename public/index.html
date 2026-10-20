@@ -1990,6 +1990,18 @@
       display: none;
     }
 
+    body.desktop-mode .header-auth-card,
+    body.desktop-mode .top-actions a[href*="pricing"],
+    body.desktop-mode #feedbackBtn,
+    body.desktop-mode .workspace-mode,
+    body.desktop-mode .floating-contact {
+      display: none !important;
+    }
+
+    body.desktop-mode .desktop-only {
+      display: inline-flex !important;
+    }
+
     @media (max-width: 1100px) {
       header {
         grid-template-columns: 1fr;
@@ -2342,6 +2354,329 @@
       }
     }
 
+    /* Readability pass: po.wsnail.com is a work tool, so PC reading comfort wins over dense decorative styling. */
+    body {
+      font-size: 18px;
+      line-height: 1.7;
+      color: #172033;
+    }
+
+    p,
+    li {
+      color: #1f2937;
+      font-size: 1rem;
+      line-height: 1.68;
+    }
+
+    input,
+    select,
+    textarea {
+      min-height: 48px;
+      padding: 12px 14px;
+      color: #0f172a;
+      font-size: 18px;
+      line-height: 1.45;
+    }
+
+    button,
+    .text-link,
+    .nav-button {
+      min-height: 44px;
+      padding: 10px 15px;
+      font-size: 17px;
+      line-height: 1.25;
+    }
+
+    .panel {
+      border-radius: 12px;
+      padding: 22px;
+    }
+
+    .operator-card,
+    .result-guide {
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    .operator-title h2,
+    .result-guide h2,
+    .panel h2 {
+      font-size: 25px;
+      line-height: 1.22;
+    }
+
+    .operator-title p,
+    .result-guide p,
+    .notice,
+    label,
+    .tag,
+    .result-guide-pills span {
+      font-size: 17px;
+    }
+
+    .step-badge {
+      min-width: 38px;
+      height: 38px;
+      font-size: 18px;
+    }
+
+    .decision-card,
+    .action-card {
+      border-radius: 14px;
+      padding: 26px;
+    }
+
+    .decision-label {
+      font-size: 36px;
+    }
+
+    .decision-verdict {
+      max-width: 980px;
+      font-size: 21px;
+    }
+
+    .decision-metric {
+      min-height: 92px;
+      padding: 16px;
+      border-radius: 12px;
+    }
+
+    .decision-metric small {
+      color: #334155;
+      font-size: 16px;
+    }
+
+    .decision-metric strong {
+      font-size: 26px;
+    }
+
+    table {
+      font-size: 18px;
+    }
+
+    th,
+    td {
+      padding: 13px 14px;
+    }
+
+    th {
+      font-size: 17px;
+    }
+
+    @media (min-width: 1180px) {
+      header {
+        grid-template-columns: minmax(500px, 1fr) auto;
+        padding: 18px 36px;
+      }
+
+      h1 {
+        font-size: 36px;
+      }
+
+      .top-actions {
+        max-width: none;
+        gap: 12px;
+      }
+
+      .text-link,
+      .nav-button,
+      .header-auth-card summary {
+        min-height: 46px;
+        padding: 11px 16px;
+        font-size: 17px;
+      }
+
+      .header-auth-card summary small {
+        font-size: 14px;
+      }
+
+      .header-auth-dropdown {
+        width: min(980px, calc(100vw - 72px));
+      }
+
+      .header-auth-fields {
+        grid-template-columns: minmax(260px, 1fr) minmax(220px, 0.8fr) auto;
+      }
+
+      .value-stage {
+        grid-template-columns: minmax(0, 1.25fr) minmax(420px, 0.85fr);
+        gap: 24px;
+        padding: 26px 36px 6px;
+      }
+
+      .case-card,
+      .quick-card {
+        border-radius: 16px;
+        padding: 26px;
+      }
+
+      .case-card {
+        grid-template-columns: minmax(0, 1fr) 210px;
+        gap: 20px;
+      }
+
+      .case-card h2,
+      .quick-card h2 {
+        font-size: 28px;
+        line-height: 1.24;
+      }
+
+      .case-card p,
+      .quick-card p {
+        font-size: 18px;
+        line-height: 1.65;
+      }
+
+      .signal-list {
+        gap: 10px 14px;
+      }
+
+      .signal-row {
+        grid-template-columns: 92px 1fr;
+        font-size: 18px;
+      }
+
+      .share-card {
+        padding: 18px;
+        gap: 10px;
+      }
+
+      .share-score {
+        font-size: 46px;
+      }
+
+      .share-metrics {
+        gap: 8px;
+        font-size: 15px;
+      }
+
+      .opportunity-list span {
+        padding: 7px 12px;
+        font-size: 17px;
+      }
+
+      .quick-form {
+        gap: 14px;
+      }
+
+      .quick-form input,
+      .quick-form button {
+        min-height: 54px;
+        font-size: 18px;
+      }
+
+      .analysis-command-panel {
+        grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
+        gap: 22px;
+        margin: 18px 36px 18px;
+        padding: 24px;
+      }
+
+      .workspace-heading {
+        margin: 24px 36px 12px;
+      }
+
+      .workspace-heading h2 {
+        font-size: 31px;
+      }
+
+      .workspace-heading p {
+        max-width: 1040px;
+        font-size: 18px;
+      }
+
+      .workspace-mode {
+        min-height: 42px;
+        padding: 8px 16px;
+        font-size: 17px;
+      }
+
+      .layout {
+        grid-template-columns: clamp(430px, 28vw, 540px) minmax(0, 1fr);
+        gap: 24px;
+        padding: 18px 36px 40px;
+      }
+
+      .workspace-sidebar {
+        top: 24px;
+        max-height: calc(100vh - 48px);
+        padding: 22px;
+      }
+
+      .workspace-results {
+        min-height: calc(100vh - 48px);
+        padding: 28px;
+      }
+
+      .drop-zone {
+        padding: 24px;
+      }
+
+      .drop-zone strong {
+        font-size: 24px;
+      }
+
+      .suggest-list {
+        gap: 8px 10px;
+        font-size: 17px;
+      }
+
+      .tabs {
+        margin: 0 0 20px;
+      }
+
+      .tab {
+        min-height: 46px;
+        font-size: 17px;
+      }
+
+      .empty-guide {
+        padding: 32px;
+      }
+
+      .empty-guide strong {
+        font-size: 26px;
+      }
+
+      .empty-guide li {
+        font-size: 18px;
+      }
+
+      .kpis {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+      }
+
+      .kpi {
+        min-height: 126px;
+        padding: 20px;
+      }
+
+      .kpi strong {
+        font-size: clamp(30px, 2.4vw, 40px);
+      }
+
+      .decision-card {
+        padding: 30px;
+      }
+
+      .decision-label {
+        font-size: 44px;
+      }
+
+      .decision-metrics {
+        gap: 14px;
+      }
+
+      .decision-metric {
+        min-height: 104px;
+      }
+
+      .decision-metric strong {
+        font-size: 31px;
+      }
+    }
+
     @media (max-width: 680px) {
       body {
         font-size: 17px;
@@ -2465,7 +2800,7 @@
       }
     }
   </style>
-  <link rel="stylesheet" href="/public/react-workbench/workbench.css?v=density-2">
+  <link rel="stylesheet" href="/public/react-workbench/workbench.css?v=clarity-large-1">
 </head>
 <body>
   <div class="app">
@@ -2479,6 +2814,8 @@
       <div class="top-actions">
         <a class="text-link" href="/help.html?utm_source=home_nav&utm_medium=nav&utm_campaign=help" data-track="home_help_click">使用教程</a>
         <a class="text-link" href="/pricing.html?utm_source=home_nav&utm_medium=nav&utm_campaign=pricing">价格方案</a>
+        <span class="notice desktop-only hidden">本地版 · 数据保存在本机</span>
+        <a class="text-link desktop-only hidden" href="/desktop-settings.html?desktop=1">本地设置</a>
         <button class="nav-button" id="feedbackBtn" type="button">问题反馈</button>
         <button class="nav-button" id="contactBtn" type="button">联系我们</button>
         <details id="authPanel" class="header-auth-card">
@@ -2591,7 +2928,7 @@
           <span class="step-badge">3</span>
           <div>
             <h2>生成判断报告</h2>
-            <p>完整报告会在后端扣次数；载入样例不扣次数。</p>
+            <p><span class="cloud-copy">完整报告会在后端扣次数；载入样例不扣次数。</span><span class="desktop-only hidden">本地版不扣次数，报告会保存到本机项目库。</span></p>
           </div>
         </div>
         <div class="primary-action-bar">
@@ -3313,6 +3650,9 @@ B0P200008,ValueYard,2026-06,750,18742.50,24.99`;
       schemaMappingReports: [],
       fieldKnowledgeBase: {},
       fieldAiCache: {},
+      localFileIds: [],
+      lastLocalProjectId: "",
+      lastLocalReportId: "",
       result: null,
       cleanedRows: [],
       currentProducts: [],
@@ -3323,6 +3663,41 @@ B0P200008,ValueYard,2026-06,750,18742.50,24.99`;
 
     const $ = (id) => document.getElementById(id);
     const TOKEN_KEY = "po_auth_token";
+    const DESKTOP_MODE = new URLSearchParams(location.search).get("desktop") === "1" || Boolean(window.poDesktop);
+    if (DESKTOP_MODE) {
+      document.body.classList.add("desktop-mode");
+      document.querySelectorAll(".cloud-copy").forEach(node => node.classList.add("hidden"));
+    }
+
+    async function desktopRuntime() {
+      if (!DESKTOP_MODE || !window.poDesktop) return { apiBase: location.origin, mode: "desktop" };
+      try {
+        return await window.poDesktop.getRuntime();
+      } catch (error) {
+        return { apiBase: location.origin, mode: "desktop", error: error.message };
+      }
+    }
+
+    async function desktopApi(path, options = {}) {
+      const runtime = await desktopRuntime();
+      const apiBase = String(runtime.apiBase || location.origin).replace(/\/$/, "");
+      const headers = { ...(options.headers || {}) };
+      if (options.body && !(options.body instanceof FormData) && !headers["Content-Type"]) {
+        headers["Content-Type"] = "application/json";
+      }
+      const response = await fetch(apiBase + path, { ...options, headers });
+      const raw = await response.text();
+      let data = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch (error) {
+        data = { success: false, error: raw || "本地接口返回异常" };
+      }
+      if (!response.ok || data.success === false) {
+        throw new Error(data.error || `本地接口异常：HTTP ${response.status}`);
+      }
+      return data;
+    }
 
     const analytics = (() => {
       const key = "po_analytics_session";
@@ -3390,6 +3765,7 @@ B0P200008,ValueYard,2026-06,750,18742.50,24.99`;
         });
       };
       const track = (eventName, metadata = {}) => {
+        if (DESKTOP_MODE) return;
         if (!/^https?:$/.test(location.protocol)) return;
         const body = JSON.stringify({ eventName, ...base, metadata: { ...metadata, attribution } });
         if (navigator.sendBeacon) {
@@ -6929,20 +7305,36 @@ B0P200008,ValueYard,2026-06,750,18742.50,24.99`;
       return new TextDecoder().decode(bytes);
     }
 
+    async function saveDesktopUploads(files) {
+      if (!DESKTOP_MODE || !files.length) return [];
+      try {
+        const form = new FormData();
+        files.forEach(file => form.append("files", file, file.name));
+        const data = await desktopApi("/api/local/uploads", { method: "POST", body: form });
+        const saved = data.files || [];
+        state.localFileIds = Array.from(new Set(state.localFileIds.concat(saved.map(file => file.id).filter(Boolean))));
+        return saved;
+      } catch (error) {
+        console.warn("desktop upload save failed", error);
+        return [];
+      }
+    }
+
     async function readFiles(files) {
       if (!files.length) return;
       renderUploadList("读取中...");
       try {
         const uploads = [];
+        const desktopSavedFiles = await saveDesktopUploads(files);
         if (state.isSampleData) {
           state.schemaMappingReports = [];
           state.fieldMaps = {};
         }
-        for (const file of files) {
+        for (const [index, file] of files.entries()) {
           const rows = (await parseTableFile(file)).map(row => ({ ...row, __source_file: file.name }));
           const source = classifyRows(rows, file.name);
           const mapped = await mapRows(rows, source, file.name);
-          uploads.push({ slotId: "upload-" + (++state.uploadSeq), source, name: file.name, rows: mapped });
+          uploads.push({ slotId: "upload-" + (++state.uploadSeq), source, name: file.name, rows: mapped, localFileId: desktopSavedFiles[index]?.id || "" });
         }
         state.uploads = state.isSampleData ? uploads : state.uploads.concat(uploads);
         state.isSampleData = false;
@@ -7062,6 +7454,7 @@ B0P200008,ValueYard,2026-06,750,18742.50,24.99`;
         $("roiInputPanel").removeAttribute("open");
         renderReport(state.result);
         renderCleanResult(products, cleanedRows);
+        await saveDesktopReport(state.result);
         analytics.track("report_generated", {
           products: products.length,
           rows: mappedRows.length,
@@ -7075,6 +7468,53 @@ B0P200008,ValueYard,2026-06,750,18742.50,24.99`;
           $("analyzeBtn").disabled = false;
           $("analyzeBtn").textContent = "生成判断报告";
         }
+      }
+    }
+
+    async function saveDesktopReport(result) {
+      if (!DESKTOP_MODE || !result) return;
+      try {
+        const summary = window.__poLastAnalysisSummary || {};
+        const targetName = $("targetProductName").value.trim() || inferKeywords() || "本地分析项目";
+        const payload = {
+          project_id: state.lastLocalProjectId || "",
+          project_name: targetName,
+          title: `${targetName} 新品机会判断报告`,
+          file_ids: state.localFileIds,
+          summary: {
+            ...summary,
+            target_product_name: targetName
+          },
+          report: {
+            title: `${targetName} 新品机会判断报告`,
+            target_product_name: targetName,
+            currency: $("targetCurrency").value || "$",
+            generated_at: new Date().toISOString(),
+            decision: result.decision,
+            decision_label: summary.decisionLabel || result.decision?.label || "",
+            verdict: summary.verdict || result.decision?.text || "",
+            roi: result.roi,
+            metrics: result.metrics,
+            scores: result.scores,
+            marketVisuals: result.marketVisuals,
+            tailOpportunity: result.tailOpportunity,
+            reviewAnalysis: result.reviewAnalysis,
+            positives: result.positives,
+            negatives: result.negatives,
+            decisionTags: result.decisionTags,
+            explanation: result.explanation,
+            next_actions: buildNextActions(result),
+            products: (result.products || []).slice(0, 200)
+          }
+        };
+        const data = await desktopApi("/api/local/reports", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        state.lastLocalProjectId = data.project?.id || state.lastLocalProjectId;
+        state.lastLocalReportId = data.report?.id || state.lastLocalReportId;
+      } catch (error) {
+        console.warn("desktop report save failed", error);
       }
     }
 
@@ -7116,6 +7556,9 @@ B0P200008,ValueYard,2026-06,750,18742.50,24.99`;
       state.uploads = [];
       state.fieldMaps = {};
       state.schemaMappingReports = [];
+      state.localFileIds = [];
+      state.lastLocalProjectId = "";
+      state.lastLocalReportId = "";
       state.result = null;
       state.cleanedRows = [];
       state.currentProducts = [];

@@ -34,8 +34,9 @@ Core flow:
 
 ## Deployment Notes
 
-- Public frontend/project: `/Users/woniu/dm/进化网站/sites/po-wsnail-com`
+- Deployed site files live in `public/` (Pages output dir). Root holds source/docs only and is not published.
 - Local MVP mirror: `/Users/woniu/dm/进化网站/workspace/亚马逊电商系统/analyzer/opportunity-mvp`
 - Admin frontend: `/Users/woniu/dm/进化网站/sites/hou-wsnail-com`
-- Deploy PO site with `wrangler pages deploy . --project-name po-wsnail-com --commit-dirty=true`.
+- Deploy PO site: push to `main` (GitHub Actions runs `wrangler pages deploy public --project-name=po-wsnail-com --branch=main`). Manual: `wrangler pages deploy public --project-name po-wsnail-com`.
+- `npm run build:workbench` writes to `public/public/react-workbench/`. Note: the committed `workbench.css` was taken from the live 2026-06-01 build; `src/react-workbench/styles.css` does not yet contain those changes, so rebuilding will revert them until the source is updated.
 - Deploy admin site with `npm run build`, then `wrangler pages deploy dist --project-name hou-wsnail-com --commit-dirty=true`.

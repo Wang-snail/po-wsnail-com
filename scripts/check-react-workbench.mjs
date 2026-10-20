@@ -17,7 +17,7 @@ function assert(condition, message) {
   }
 }
 
-const index = read("index.html");
+const index = read("public/index.html");
 assert(index.includes('id="reactWorkbenchHero"'), "index.html exposes the React workbench mount");
 assert(index.includes("/public/react-workbench/workbench.css"), "index.html loads the React workbench stylesheet");
 assert(index.includes("/public/react-workbench/workbench.js"), "index.html loads the React workbench bundle");
@@ -37,5 +37,5 @@ if (existsSync(resolve(root, appPath))) {
   assert(app.includes("po:analysis-result"), "React result dock listens for analysis updates");
 }
 
-assert(existsSync(resolve(root, "public/react-workbench/workbench.js")), "built React workbench JS exists");
-assert(existsSync(resolve(root, "public/react-workbench/workbench.css")), "built React workbench CSS exists");
+assert(existsSync(resolve(root, "public/public/react-workbench/workbench.js")), "built React workbench JS exists");
+assert(existsSync(resolve(root, "public/public/react-workbench/workbench.css")), "built React workbench CSS exists");
