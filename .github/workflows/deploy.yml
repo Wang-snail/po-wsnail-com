@@ -1,0 +1,36 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-pages-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # public/ is committed as-is (it is the exact deployed file set).
+      # The React workbench is NOT rebuilt here: the committed workbench.css
+      # contains live changes that are not yet in src/react-workbench/styles.css.
+      - name: Sanity check deploy files
+        run: |
+          node scripts/check-react-workbench.mjs
+          test -f public/_worker.js && test -f public/index.html
+
+      - name: Deploy public/ to Cloudflare Pages (po-wsnail-com, production branch main)
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4"
+          command: pages deploy public --project-name=po-wsnail-com --branch=main --commit-dirty=true
